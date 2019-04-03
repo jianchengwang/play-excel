@@ -1,7 +1,7 @@
 package cn.jianchengwang.playexcel;
 
 import cn.jianchengwang.playexcel.exception.ReaderException;
-import cn.jianchengwang.playexcel.metadata.Sheet;
+import cn.jianchengwang.playexcel.metadata.SheetMd;
 import cn.jianchengwang.playexcel.reader.ReaderFactory;
 
 import java.io.File;
@@ -21,24 +21,24 @@ public class Reader<T> {
 
     private Charset charset = StandardCharsets.UTF_8;
 
-    private Sheet<T> sheet;
+    private SheetMd<T> sheet;
 
-    public Reader(Sheet<T> sheet) {
+    public Reader(SheetMd<T> sheet) {
         this.sheet = sheet;
     }
 
     public static <T> Reader<T> create(Class<T> modelType) {
-        Sheet sheet = Sheet.create(modelType);
+        SheetMd sheet = SheetMd.create(modelType);
         return new Reader<>(sheet);
     }
 
     public static <T> Reader<T> create(Class<T> modelType, File fromFile) {
-        Sheet sheet = Sheet.create(modelType);
+        SheetMd sheet = SheetMd.create(modelType);
         return new Reader<>(sheet).from(fromFile);
     }
 
     public static <T> Reader<T> create(Class<T> modelType, InputStream fromStream) {
-        Sheet sheet = Sheet.create(modelType);
+        SheetMd sheet = SheetMd.create(modelType);
         return new Reader<>(sheet).from(fromStream);
     }
 
@@ -90,7 +90,7 @@ public class Reader<T> {
         return this.charset;
     }
 
-    public Sheet sheet() {
+    public SheetMd sheet() {
         return this.sheet;
     }
 

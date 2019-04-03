@@ -1,24 +1,10 @@
-/**
- * Copyright (c) 2018, biezhi (biezhi.me@gmail.com)
- * <p>
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+
 package cn.jianchengwang.playexcel.reader;
 
-import io.github.biezhi.excel.plus.Reader;
-import io.github.biezhi.excel.plus.annotation.ExcelColumn;
-import io.github.biezhi.excel.plus.conveter.Converter;
-import io.github.biezhi.excel.plus.exception.ReaderException;
+import cn.jianchengwang.playexcel.Reader;
+import cn.jianchengwang.playexcel.annotation.ExcelColumn;
+import cn.jianchengwang.playexcel.converter.Converter;
+import cn.jianchengwang.playexcel.exception.ReaderException;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.BufferedReader;
@@ -27,12 +13,6 @@ import java.io.InputStreamReader;
 import java.lang.reflect.Field;
 import java.util.stream.Stream;
 
-/**
- * CSV Reader
- *
- * @author biezhi
- * @date 2018-12-13
- */
 @Slf4j
 public class ReaderWithCSV extends ReaderConverter implements ExcelReader {
 
@@ -44,7 +24,7 @@ public class ReaderWithCSV extends ReaderConverter implements ExcelReader {
 
     @Override
     public <T> Stream<T> readExcel(Reader reader) throws ReaderException {
-        Class type = reader.modelType();
+        Class type = reader.sheet().modelType();
 
         try {
             this.initFieldConverter(type.getDeclaredFields());
@@ -57,7 +37,7 @@ public class ReaderWithCSV extends ReaderConverter implements ExcelReader {
         try (BufferedReader br = new BufferedReader(
                 new InputStreamReader(inputStream, reader.charset()))) {
 
-            int startRow = reader.startRow();
+            int startRow = reader.sheet().headLineRow();
 
             int    pos  = 0;
             String line = "";

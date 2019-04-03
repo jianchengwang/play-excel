@@ -6,6 +6,8 @@ import cn.jianchengwang.playexcel.converter.Converter;
 import cn.jianchengwang.playexcel.exception.ConverterException;
 import cn.jianchengwang.playexcel.exception.ReaderException;
 import cn.jianchengwang.playexcel.kit.StrKit;
+import cn.jianchengwang.playexcel.metadata.ExtMsg;
+import cn.jianchengwang.playexcel.metadata.SheetMd;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
 
@@ -13,7 +15,9 @@ import java.lang.reflect.Field;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.stream.Stream;
 
 @Slf4j
@@ -29,29 +33,80 @@ public class ReaderWith2003 extends ReaderConverter implements ExcelReader {
     public <T> Stream<T> readExcel(Reader reader) throws ReaderException {
         Class             type    = reader.sheet().modelType();
         Stream.Builder<T> builder = Stream.builder();
+
         try {
             this.initFieldConverter(type.getDeclaredFields());
-            Sheet sheet = getSheet(reader);
 
-            int startRow = reader.sheet().headLineRow();
-            int totalRow = sheet.getPhysicalNumberOfRows();
+            boolean isGetSingleSheet = StrKit.isNotEmpty(reader.sheet().sheetName()) || reader.sheet().sheetIndex()>-1;
+            for(int si=0; si<workbook.getNumberOfSheets(); si++) {
 
-            for (int i = 0; i < totalRow; i++) {
-                if (i < startRow) {
-                    continue;
-                }
-                Row row = sheet.getRow(i);
-                if (null == row) {
-                    continue;
+                Sheet sheet = workbook.getSheetAt(si);
+                if(isGetSingleSheet) {
+                    sheet = getSheet(reader);
                 }
 
-                Object instance = type.newInstance();
-                for (Field field : fieldIndexes.values()) {
-                    this.writeFiledValue(row, instance, field);
+                SheetMd<T> sheetMd = SheetMd.create(reader.sheet().modelType(), si, sheet.getSheetName());
+
+                int extMsgRow = 0;
+                boolean haveExtMsg = reader.sheet().haveExtMsg();
+                if(haveExtMsg) {
+
+                    extMsgRow = reader.sheet().extMsgRow();
+                    int extMsgCol = reader.sheet().extMsgCol();
+                    int extMsgColSpan = reader.sheet().extMsgColSpan();
+
+                    List<ExtMsg> extMsgList = new ArrayList<>();
+                    for(int ri=0; ri<extMsgRow; ri++) {
+                        Row row = sheet.getRow(ri);
+                        if (null == row) {
+                            continue;
+                        }
+
+                        for(int ci=0; ci<extMsgCol; ci++) {
+
+                            Cell cellTitle   = row.getCell(ci + extMsgColSpan*(ci-1));
+                            Cell cellMsg = row.getCell(ci + extMsgColSpan*(ci-1) + 1);
+
+                            ExtMsg extMsg = new ExtMsg(cellTitle.getStringCellValue(), cellMsg.getStringCellValue());
+                            extMsgList.add(extMsg);
+
+                        }
+                    }
+
+                    sheetMd.extMsgList(extMsgList);
                 }
-                builder.add((T) instance);
+
+                int startRow = reader.sheet().headLineRow();
+                int totalRow = sheet.getPhysicalNumberOfRows();
+                if(haveExtMsg) startRow = startRow + extMsgRow + 1;
+
+                List<T> data = new ArrayList<>();
+                for (int ri = 0; ri < totalRow; ri++) {
+                    if (ri < startRow) {
+                        continue;
+                    }
+                    Row row = sheet.getRow(ri);
+                    if (null == row) {
+                        continue;
+                    }
+
+                    Object instance = type.newInstance();
+                    for (Field field : fieldIndexes.values()) {
+                        this.writeFiledValue(row, instance, field);
+                    }
+
+                    data.add((T) instance);
+                    builder.add((T) instance);
+
+                }
+
+                sheetMd.data(data);
+
+                if(isGetSingleSheet) break;
             }
+
             return builder.build();
+
         } catch (Exception e) {
             throw new ReaderException(e);
         }
