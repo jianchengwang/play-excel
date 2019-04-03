@@ -1,0 +1,31 @@
+
+apply plugin:'java'
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+repositories {
+    mavenLocal()
+    maven() {
+        url: "http://maven.aliyun.com/nexus/content/groups/public"
+    }
+    mavenCentral()
+}
+
+def poiVersion = '4.0.1'
+def lombokVersion = '1.18.6'
+dependencies {
+
+    // https://mvnrepository.com/artifact/org.slf4j/slf4j-api
+    compile group: 'org.slf4j', name: 'slf4j-api', version: '1.7.26'
+
+    // https://mvnrepository.com/artifact/org.apache.poi/poi
+    implementation group: 'org.apache.poi', name: 'poi', version: poiVersion
+    implementation group: 'org.apache.poi', name: 'poi-ooxml', version: poiVersion
+
+
+    annotationProcessor("org.projectlombok:lombok:$lombokVersion")
+    implementation("org.projectlombok:lombok:$lombokVersion")
+
+    testImplementation group: 'junit', name: 'junit', version: '4.12'
+}
