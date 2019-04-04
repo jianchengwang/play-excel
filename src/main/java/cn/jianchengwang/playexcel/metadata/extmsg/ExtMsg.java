@@ -1,4 +1,4 @@
-package cn.jianchengwang.playexcel.metadata;
+package cn.jianchengwang.playexcel.metadata.extmsg;
 
 import lombok.Data;
 

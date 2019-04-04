@@ -4,6 +4,7 @@ package cn.jianchengwang.playexcel.reader;
 import cn.jianchengwang.playexcel.Reader;
 import cn.jianchengwang.playexcel.exception.ReaderException;
 import cn.jianchengwang.playexcel.kit.StrKit;
+import cn.jianchengwang.playexcel.metadata.SheetMd;
 import org.apache.poi.ooxml.util.SAXHelper;
 import org.apache.poi.openxml4j.exceptions.OpenXML4JException;
 import org.apache.poi.openxml4j.opc.OPCPackage;
@@ -48,6 +49,11 @@ public class ReaderWith2007 implements ExcelReader {
         } catch (Exception e) {
             throw new ReaderException(e);
         }
+    }
+
+    @Override
+    public <T> Stream<SheetMd<T>> readExcel1(Reader reader) throws ReaderException {
+        return null;
     }
 
     private OPCPackage getPackage(Reader reader) throws Exception {

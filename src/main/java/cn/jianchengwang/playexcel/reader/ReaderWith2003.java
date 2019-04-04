@@ -6,8 +6,9 @@ import cn.jianchengwang.playexcel.converter.Converter;
 import cn.jianchengwang.playexcel.exception.ConverterException;
 import cn.jianchengwang.playexcel.exception.ReaderException;
 import cn.jianchengwang.playexcel.kit.StrKit;
-import cn.jianchengwang.playexcel.metadata.ExtMsg;
+import cn.jianchengwang.playexcel.metadata.extmsg.ExtMsg;
 import cn.jianchengwang.playexcel.metadata.SheetMd;
+import cn.jianchengwang.playexcel.metadata.extmsg.ExtMsgConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
 
@@ -31,8 +32,15 @@ public class ReaderWith2003 extends ReaderConverter implements ExcelReader {
 
     @Override
     public <T> Stream<T> readExcel(Reader reader) throws ReaderException {
+
+        Stream<SheetMd<T>> sheetMdStream = readExcel1(reader);
+
+        return sheetMdStream.flatMap(sheet -> sheet.data().stream());
+    }
+
+    public <T> Stream<SheetMd<T>> readExcel1(Reader reader) throws ReaderException {
         Class             type    = reader.sheet().modelType();
-        Stream.Builder<T> builder = Stream.builder();
+        Stream.Builder<SheetMd<T>> builder = Stream.builder();
 
         try {
             this.initFieldConverter(type.getDeclaredFields());
@@ -48,12 +56,14 @@ public class ReaderWith2003 extends ReaderConverter implements ExcelReader {
                 SheetMd<T> sheetMd = SheetMd.create(reader.sheet().modelType(), si, sheet.getSheetName());
 
                 int extMsgRow = 0;
-                boolean haveExtMsg = reader.sheet().haveExtMsg();
+                ExtMsgConfig extMsgConfig = reader.sheet().extMsgConfig();
+                boolean haveExtMsg = extMsgConfig.haveExtMsg();
+
                 if(haveExtMsg) {
 
-                    extMsgRow = reader.sheet().extMsgRow();
-                    int extMsgCol = reader.sheet().extMsgCol();
-                    int extMsgColSpan = reader.sheet().extMsgColSpan();
+                    extMsgRow = extMsgConfig.extMsgRow();
+                    int extMsgCol = extMsgConfig.extMsgCol();
+                    int extMsgColSpan = extMsgConfig.extMsgColSpan();
 
                     List<ExtMsg> extMsgList = new ArrayList<>();
                     for(int ri=0; ri<extMsgRow; ri++) {
@@ -96,11 +106,13 @@ public class ReaderWith2003 extends ReaderConverter implements ExcelReader {
                     }
 
                     data.add((T) instance);
-                    builder.add((T) instance);
+
 
                 }
 
                 sheetMd.data(data);
+
+                builder.add(sheetMd);
 
                 if(isGetSingleSheet) break;
             }
