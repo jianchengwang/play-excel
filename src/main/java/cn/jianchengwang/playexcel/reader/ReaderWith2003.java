@@ -31,14 +31,7 @@ public class ReaderWith2003 extends ReaderConverter implements ExcelReader {
     }
 
     @Override
-    public <T> Stream<T> readExcel(Reader reader) throws ReaderException {
-
-        Stream<SheetMd<T>> sheetMdStream = readExcel1(reader);
-
-        return sheetMdStream.flatMap(sheet -> sheet.data().stream());
-    }
-
-    public <T> Stream<SheetMd<T>> readExcel1(Reader reader) throws ReaderException {
+    public <T> void readExcel(Reader reader) throws ReaderException {
         Class             type    = reader.sheet().modelType();
         Stream.Builder<SheetMd<T>> builder = Stream.builder();
 
@@ -53,11 +46,11 @@ public class ReaderWith2003 extends ReaderConverter implements ExcelReader {
                     sheet = getSheet(reader);
                 }
 
-                SheetMd<T> sheetMd = SheetMd.create(reader.sheet().modelType(), si, sheet.getSheetName());
-
                 int extMsgRow = 0;
                 ExtMsgConfig extMsgConfig = reader.sheet().extMsgConfig();
                 boolean haveExtMsg = extMsgConfig.haveExtMsg();
+
+                SheetMd<T> sheetMd = SheetMd.create(reader.sheet().modelType(), si, sheet.getSheetName()).initExtMsgList(extMsgConfig.extMsgTotal());
 
                 if(haveExtMsg) {
 
@@ -65,7 +58,7 @@ public class ReaderWith2003 extends ReaderConverter implements ExcelReader {
                     int extMsgCol = extMsgConfig.extMsgCol();
                     int extMsgColSpan = extMsgConfig.extMsgColSpan();
 
-                    List<ExtMsg> extMsgList = new ArrayList<>();
+                    List<ExtMsg> extMsgList = sheetMd.extMsgList();
                     for(int ri=0; ri<extMsgRow; ri++) {
                         Row row = sheet.getRow(ri);
                         if (null == row) {
@@ -74,16 +67,15 @@ public class ReaderWith2003 extends ReaderConverter implements ExcelReader {
 
                         for(int ci=0; ci<extMsgCol; ci++) {
 
-                            Cell cellTitle   = row.getCell(ci + extMsgColSpan*(ci-1));
-                            Cell cellMsg = row.getCell(ci + extMsgColSpan*(ci-1) + 1);
+                            Cell cellTitle = row.getCell(ci + (extMsgColSpan+1) * ci);
+                            Cell cellMsg = row.getCell(ci + (extMsgColSpan+1) * ci + 1);
 
-                            ExtMsg extMsg = new ExtMsg(cellTitle.getStringCellValue(), cellMsg.getStringCellValue());
-                            extMsgList.add(extMsg);
+                            ExtMsg extMsg = extMsgList.get(ri);
+                            extMsg.setTitle(getCellValue(cellTitle));
+                            extMsg.setMsg(getCellValue(cellMsg));
 
                         }
                     }
-
-                    sheetMd.extMsgList(extMsgList);
                 }
 
                 int startRow = reader.sheet().headLineRow();
@@ -117,7 +109,7 @@ public class ReaderWith2003 extends ReaderConverter implements ExcelReader {
                 if(isGetSingleSheet) break;
             }
 
-            return builder.build();
+            reader.sheetMdStream(builder.build());
 
         } catch (Exception e) {
             throw new ReaderException(e);
@@ -153,8 +145,18 @@ public class ReaderWith2003 extends ReaderConverter implements ExcelReader {
         }
     }
 
+    public String getCellValue(Cell cell) throws ConverterException {
+
+        if(cell == null) return "";
+
+        if(cell.getCellType() == CellType.NUMERIC) {
+            return String.valueOf(cell.getNumericCellValue());
+        }
+
+        return cell.getStringCellValue();
+    }
+
     private boolean isDateType(Class<?> type) {
         return Date.class.equals(type) || LocalDate.class.equals(type) || LocalDateTime.class.equals(type);
     }
-
 }

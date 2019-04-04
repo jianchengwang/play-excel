@@ -9,8 +9,5 @@ import java.util.stream.Stream;
 
 public interface ExcelReader {
 
-    <T> Stream<T> readExcel(Reader reader) throws ReaderException;
-
-    <T> Stream<SheetMd<T>> readExcel1(Reader reader) throws ReaderException;
-
+    <T> void readExcel(Reader reader) throws ReaderException;
 }

@@ -3,6 +3,7 @@ package cn.jianchengwang.playexcel.metadata;
 import cn.jianchengwang.playexcel.metadata.extmsg.ExtMsg;
 import cn.jianchengwang.playexcel.metadata.extmsg.ExtMsgConfig;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class SheetMd<T> {
@@ -18,7 +19,7 @@ public class SheetMd<T> {
     private List<ExtMsg> extMsgList; // 附加信息
 
     private long totalRow;
-    private List<T> data;
+    private List<T> data = new ArrayList<>();
 
     public SheetMd(Class<T> modelType) {
         this.modelType = modelType;
@@ -71,6 +72,15 @@ public class SheetMd<T> {
         this.extMsgList = extMsgList;
 
         this.extMsgConfig = ExtMsgConfig.create(extMsgList, extMsgCol, extMsgColSpan);
+
+        return this;
+    }
+
+    public SheetMd initExtMsgList(int extMsgTotal) {
+        this.extMsgList = new ArrayList<>();
+        for(int i=0; i<extMsgTotal; i++) {
+            extMsgList.add(new ExtMsg());
+        }
 
         return this;
     }

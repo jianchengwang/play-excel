@@ -23,6 +23,9 @@ public class Reader<T> {
 
     private SheetMd<T> sheet;
 
+    private Stream<T> stream;
+    private Stream<SheetMd<T>> sheetMdStream;
+
     public Reader(SheetMd<T> sheet) {
         this.sheet = sheet;
     }
@@ -66,9 +69,11 @@ public class Reader<T> {
         }
 
         if (fromFile != null) {
-            return ReaderFactory.readByFile(this);
+            ReaderFactory.readByFile(this);
+            return this.stream;
         } else {
-            return ReaderFactory.readByStream(this);
+            ReaderFactory.readByStream(this);
+            return this.stream;
         }
     }
 
@@ -92,6 +97,23 @@ public class Reader<T> {
 
     public SheetMd sheet() {
         return this.sheet;
+    }
+
+    public Stream<T> stream() {
+        return this.stream;
+    }
+
+    public Stream<SheetMd<T>> sheetMdStream() {
+        return this.sheetMdStream;
+    }
+
+    public void stream(Stream<T> stream) {
+        this.stream = stream;
+    }
+
+    public void sheetMdStream(Stream<SheetMd<T>> sheetMdStream) {
+        this.sheetMdStream = sheetMdStream;
+        this.stream = this.sheetMdStream().flatMap(sheet -> sheet.data().stream());
     }
 
 }

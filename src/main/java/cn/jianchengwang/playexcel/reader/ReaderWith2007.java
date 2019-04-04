@@ -33,27 +33,21 @@ public class ReaderWith2007 implements ExcelReader {
         // ignore
     }
 
-    public <T> Stream<T> readExcel(Reader reader) throws ReaderException {
+    public <T> void readExcel(Reader reader) throws ReaderException {
         Class<T> type = reader.sheet().modelType();
         try {
             // The package open is instantaneous, as it should be.
             try (OPCPackage p = getPackage(reader)) {
 
-                SheetToCSV<T> sheetToCSV = new SheetToCSV<>(p, reader.sheet().headLineRow(), type);
+                SheetToCSV<T> sheetToCSV = new SheetToCSV<T>(p, reader);
 
                 this.process(reader, sheetToCSV);
 
-                Stream.Builder<T> stream = sheetToCSV.getRowsStream();
-                return stream.build();
+                reader.sheetMdStream(sheetToCSV.getSheetMdStream());
             }
         } catch (Exception e) {
             throw new ReaderException(e);
         }
-    }
-
-    @Override
-    public <T> Stream<SheetMd<T>> readExcel1(Reader reader) throws ReaderException {
-        return null;
     }
 
     private OPCPackage getPackage(Reader reader) throws Exception {
@@ -77,19 +71,25 @@ public class ReaderWith2007 implements ExcelReader {
         XSSFReader.SheetIterator   iter       = (XSSFReader.SheetIterator) xssfReader.getSheetsData();
         int                        index      = 0;
 
-        boolean bySheetName = StrKit.isNotEmpty(reader.sheet().sheetName());
-
+        boolean isGetSingleSheet = StrKit.isNotEmpty(reader.sheet().sheetName()) || reader.sheet().sheetIndex()>-1;
         while (iter.hasNext()) {
             try (InputStream stream = iter.next()) {
-                String sheetName = iter.getSheetName();
-                if (bySheetName && reader.sheet().sheetName().equals(sheetName)) {
-                    processSheet(styles, strings, sheetToCSV, stream);
-                    break;
+
+                if(isGetSingleSheet) {
+                    boolean bySheetName = StrKit.isNotEmpty(reader.sheet().sheetName());
+                    String sheetName = iter.getSheetName();
+                    if (bySheetName && reader.sheet().sheetName().equals(sheetName)) {
+                        processSheet(styles, strings, sheetToCSV, stream);
+                        break;
+                    }
+                    if (!bySheetName && reader.sheet().sheetIndex() == index) {
+                        processSheet(styles, strings, sheetToCSV, stream);
+                        break;
+                    }
                 }
-                if (!bySheetName && reader.sheet().sheetIndex() == index) {
-                    processSheet(styles, strings, sheetToCSV, stream);
-                    break;
-                }
+
+                processSheet(styles, strings, sheetToCSV, stream);
+
             }
             ++index;
         }

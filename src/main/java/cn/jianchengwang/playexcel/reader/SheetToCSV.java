@@ -1,7 +1,11 @@
 package cn.jianchengwang.playexcel.reader;
 
+import cn.jianchengwang.playexcel.Reader;
 import cn.jianchengwang.playexcel.converter.Converter;
 import cn.jianchengwang.playexcel.kit.ExcelKit;
+import cn.jianchengwang.playexcel.metadata.SheetMd;
+import cn.jianchengwang.playexcel.metadata.extmsg.ExtMsg;
+import cn.jianchengwang.playexcel.metadata.extmsg.ExtMsgConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.openxml4j.opc.OPCPackage;
 import org.apache.poi.ss.util.CellAddress;
@@ -10,6 +14,9 @@ import org.apache.poi.xssf.eventusermodel.XSSFSheetXMLHandler;
 import org.apache.poi.xssf.usermodel.XSSFComment;
 
 import java.lang.reflect.Field;
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -25,18 +32,30 @@ public class SheetToCSV<T> extends ReaderConverter implements XSSFSheetXMLHandle
     private int     currentCol = -1;
 
     private final OPCPackage opcPackage;
-    private final Stream.Builder<T> rowsStream;
     private final Class<T>          type;
     private final int               startRow;
 
     private T row;
 
-    public SheetToCSV(OPCPackage opcPackage, int startRow, Class<T> type) {
-        this.opcPackage = opcPackage;
-        this.rowsStream = Stream.builder();
-        this.startRow = startRow;
+    private final Stream.Builder<SheetMd<T>> sheetMdBuilder;
+    private SheetMd<T> sheetMd;
+    private final ExtMsgConfig extMsgConfig;
+    private List<ExtMsg> extMsgList;
 
-        this.type = type;
+    public SheetToCSV(OPCPackage opcPackage, Reader reader) {
+        this.opcPackage = opcPackage;
+        this.type = reader.sheet().modelType();
+
+        sheetMdBuilder = Stream.builder();
+
+        extMsgConfig = reader.sheet().extMsgConfig();
+        if(extMsgConfig.haveExtMsg()) {
+            this.startRow = extMsgConfig.extMsgRow() + 1 + reader.sheet().headLineRow();
+        } else this.startRow = reader.sheet().headLineRow();
+
+        this.sheetMd = SheetMd.create(reader.sheet().modelType()).initExtMsgList(extMsgConfig.extMsgTotal());
+
+        this.extMsgList = reader.sheet().extMsgList();
 
         try {
             this.initFieldConverter(type.getDeclaredFields());
@@ -62,14 +81,14 @@ public class SheetToCSV<T> extends ReaderConverter implements XSSFSheetXMLHandle
         if (currentRow < startRow) {
             return;
         }
-        rowsStream.add(row);
+        sheetMd.data().add(row);
     }
 
     @Override
     public void cell(String cellReference, String formattedValue,
                      XSSFComment comment) {
 
-        if (currentRow < startRow) {
+        if (currentRow < startRow && !extMsgConfig.haveExtMsg()) {
             return;
         }
 
@@ -84,27 +103,43 @@ public class SheetToCSV<T> extends ReaderConverter implements XSSFSheetXMLHandle
 
         currentCol = (int) (new CellReference(cellReference)).getCol();
 
-        Field field = fieldIndexes.get(currentCol);
-        if (null != field) {
-            try {
-                Object    cellValue = formattedValue;
-                Converter converter = fieldConverters.get(field);
-                if (null != converter) {
-                    cellValue = converter.stringToR(formattedValue);
+        if(currentRow < startRow && extMsgConfig.haveExtMsg()) {
+
+            ExtMsg extMsg = extMsgList.get(currentRow);
+            if(currentCol % (2 + extMsgConfig.extMsgColSpan()) == 0) {
+                extMsg.setTitle(formattedValue);
+            } else {
+                extMsg.setMsg(formattedValue);
+            }
+        } else {
+            Field field = fieldIndexes.get(currentCol);
+            if (null != field) {
+                try {
+                    Object    cellValue = formattedValue;
+                    Converter converter = fieldConverters.get(field);
+                    if (null != converter) {
+                        cellValue = converter.stringToR(formattedValue);
+                    }
+                    field.set(row, cellValue);
+                } catch (Exception e) {
+                    log.error("write field {} value fail", field.getName(), e);
                 }
-                field.set(row, cellValue);
-            } catch (Exception e) {
-                log.error("write field {} value fail", field.getName(), e);
             }
         }
+
+    }
+
+    @Override
+    public void endSheet() {
+        sheetMdBuilder.add(sheetMd);
     }
 
     public OPCPackage getOpcPackage() {
         return opcPackage;
     }
 
-    public Stream.Builder<T> getRowsStream() {
-        return rowsStream;
+    public Stream<SheetMd<T>> getSheetMdStream() {
+        return sheetMdBuilder.build();
     }
 
 }
