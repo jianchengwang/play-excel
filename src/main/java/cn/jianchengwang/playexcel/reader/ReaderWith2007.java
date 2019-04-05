@@ -4,7 +4,7 @@ package cn.jianchengwang.playexcel.reader;
 import cn.jianchengwang.playexcel.Reader;
 import cn.jianchengwang.playexcel.exception.ReaderException;
 import cn.jianchengwang.playexcel.kit.StrKit;
-import cn.jianchengwang.playexcel.metadata.SheetMd;
+import cn.jianchengwang.playexcel.config.Table;
 import org.apache.poi.ooxml.util.SAXHelper;
 import org.apache.poi.openxml4j.exceptions.OpenXML4JException;
 import org.apache.poi.openxml4j.opc.OPCPackage;
@@ -25,7 +25,6 @@ import org.xml.sax.XMLReader;
 import javax.xml.parsers.ParserConfigurationException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.stream.Stream;
 
 public class ReaderWith2007 implements ExcelReader {
 
@@ -34,7 +33,7 @@ public class ReaderWith2007 implements ExcelReader {
     }
 
     public <T> void readExcel(Reader reader) throws ReaderException {
-        Class<T> type = reader.sheet().modelType();
+        Class<T> type = reader.table().modelType();
         try {
             // The package open is instantaneous, as it should be.
             try (OPCPackage p = getPackage(reader)) {
@@ -43,7 +42,7 @@ public class ReaderWith2007 implements ExcelReader {
 
                 this.process(reader, sheetToCSV);
 
-                reader.sheetMdStream(sheetToCSV.getSheetMdStream());
+                reader.tableStream(sheetToCSV.getTableStream());
             }
         } catch (Exception e) {
             throw new ReaderException(e);
@@ -71,23 +70,26 @@ public class ReaderWith2007 implements ExcelReader {
         XSSFReader.SheetIterator   iter       = (XSSFReader.SheetIterator) xssfReader.getSheetsData();
         int                        index      = 0;
 
-        boolean isGetSingleSheet = StrKit.isNotEmpty(reader.sheet().sheetName()) || reader.sheet().sheetIndex()>-1;
+        boolean isGetSingleSheet = StrKit.isNotEmpty(reader.table().sheetName()) || reader.table().sheetIndex()>-1;
         while (iter.hasNext()) {
             try (InputStream stream = iter.next()) {
 
                 if(isGetSingleSheet) {
-                    boolean bySheetName = StrKit.isNotEmpty(reader.sheet().sheetName());
+                    boolean bySheetName = StrKit.isNotEmpty(reader.table().sheetName());
                     String sheetName = iter.getSheetName();
-                    if (bySheetName && reader.sheet().sheetName().equals(sheetName)) {
+
+                    sheetToCSV.sheetMd(Table.create(reader.table().modelType(),index, sheetName).initExtMsgList(reader.table().extMsgConfig().extMsgTotal()));
+                    if (bySheetName && reader.table().sheetName().equals(sheetName)) {
                         processSheet(styles, strings, sheetToCSV, stream);
                         break;
                     }
-                    if (!bySheetName && reader.sheet().sheetIndex() == index) {
+                    if (!bySheetName && reader.table().sheetIndex() == index) {
                         processSheet(styles, strings, sheetToCSV, stream);
                         break;
                     }
                 }
 
+                sheetToCSV.sheetMd(Table.create(reader.table().modelType(),index, iter.getSheetName()).initExtMsgList(reader.table().extMsgConfig().extMsgTotal()));
                 processSheet(styles, strings, sheetToCSV, stream);
 
             }

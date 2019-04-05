@@ -3,9 +3,9 @@ package cn.jianchengwang.playexcel.reader;
 import cn.jianchengwang.playexcel.Reader;
 import cn.jianchengwang.playexcel.converter.Converter;
 import cn.jianchengwang.playexcel.kit.ExcelKit;
-import cn.jianchengwang.playexcel.metadata.SheetMd;
-import cn.jianchengwang.playexcel.metadata.extmsg.ExtMsg;
-import cn.jianchengwang.playexcel.metadata.extmsg.ExtMsgConfig;
+import cn.jianchengwang.playexcel.config.Table;
+import cn.jianchengwang.playexcel.config.extmsg.ExtMsg;
+import cn.jianchengwang.playexcel.config.extmsg.ExtMsgConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.openxml4j.opc.OPCPackage;
 import org.apache.poi.ss.util.CellAddress;
@@ -14,9 +14,6 @@ import org.apache.poi.xssf.eventusermodel.XSSFSheetXMLHandler;
 import org.apache.poi.xssf.usermodel.XSSFComment;
 
 import java.lang.reflect.Field;
-import java.util.Collections;
-import java.util.List;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -35,27 +32,26 @@ public class SheetToCSV<T> extends ReaderConverter implements XSSFSheetXMLHandle
     private final Class<T>          type;
     private final int               startRow;
 
-    private T row;
-
-    private final Stream.Builder<SheetMd<T>> sheetMdBuilder;
-    private SheetMd<T> sheetMd;
+    private final Table<T> tableConfig;
     private final ExtMsgConfig extMsgConfig;
-    private List<ExtMsg> extMsgList;
+
+    private T row;
+    private final Stream.Builder<Table<T>> tableBuilder;
+    private Table<T> table;
 
     public SheetToCSV(OPCPackage opcPackage, Reader reader) {
         this.opcPackage = opcPackage;
-        this.type = reader.sheet().modelType();
+        this.type = reader.table().modelType();
 
-        sheetMdBuilder = Stream.builder();
+        tableConfig = reader.table();
+        extMsgConfig = reader.table().extMsgConfig();
 
-        extMsgConfig = reader.sheet().extMsgConfig();
+        int headTitleRow = tableConfig.haveHeadTitle() ? 1: 0;
         if(extMsgConfig.haveExtMsg()) {
-            this.startRow = extMsgConfig.extMsgRow() + 1 + reader.sheet().headLineRow();
-        } else this.startRow = reader.sheet().headLineRow();
+            this.startRow = headTitleRow + extMsgConfig.extMsgRow() + 1 + tableConfig.headLineRow();
+        } else this.startRow = headTitleRow + tableConfig.headLineRow();
 
-        this.sheetMd = SheetMd.create(reader.sheet().modelType()).initExtMsgList(extMsgConfig.extMsgTotal());
-
-        this.extMsgList = reader.sheet().extMsgList();
+        tableBuilder = Stream.builder();
 
         try {
             this.initFieldConverter(type.getDeclaredFields());
@@ -81,7 +77,7 @@ public class SheetToCSV<T> extends ReaderConverter implements XSSFSheetXMLHandle
         if (currentRow < startRow) {
             return;
         }
-        sheetMd.data().add(row);
+        table.data().add(row);
     }
 
     @Override
@@ -103,9 +99,14 @@ public class SheetToCSV<T> extends ReaderConverter implements XSSFSheetXMLHandle
 
         currentCol = (int) (new CellReference(cellReference)).getCol();
 
-        if(currentRow < startRow && extMsgConfig.haveExtMsg()) {
+        if((currentRow+1) < startRow && extMsgConfig.haveExtMsg()) {
 
-            ExtMsg extMsg = extMsgList.get(currentRow);
+            if(tableConfig.haveHeadTitle() && currentRow == 0) return;
+
+            int extMsgListIndex = currentCol / (2 + extMsgConfig.extMsgColSpan());
+            if(currentRow>0) extMsgListIndex +=  currentRow + extMsgConfig.extMsgCol()*(currentRow-1) + 1;
+
+            ExtMsg extMsg = table.extMsgList().get(extMsgListIndex);
             if(currentCol % (2 + extMsgConfig.extMsgColSpan()) == 0) {
                 extMsg.setTitle(formattedValue);
             } else {
@@ -131,15 +132,20 @@ public class SheetToCSV<T> extends ReaderConverter implements XSSFSheetXMLHandle
 
     @Override
     public void endSheet() {
-        sheetMdBuilder.add(sheetMd);
+        table.calTotalRow();
+        tableBuilder.add(table);
     }
 
     public OPCPackage getOpcPackage() {
         return opcPackage;
     }
 
-    public Stream<SheetMd<T>> getSheetMdStream() {
-        return sheetMdBuilder.build();
+    public Stream<Table<T>> getTableStream() {
+        return tableBuilder.build();
+    }
+
+    public void sheetMd(Table<T> table) {
+        this.table = table;
     }
 
 }

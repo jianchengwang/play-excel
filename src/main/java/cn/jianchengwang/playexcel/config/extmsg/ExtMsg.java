@@ -1,7 +1,6 @@
-package cn.jianchengwang.playexcel.metadata.extmsg;
+package cn.jianchengwang.playexcel.config.extmsg;
 
 import lombok.Data;
-import org.apache.poi.ss.usermodel.Cell;
 
 /**
  * 扩展信息

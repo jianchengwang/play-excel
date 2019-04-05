@@ -1,7 +1,7 @@
 package cn.jianchengwang.playexcel;
 
+import cn.jianchengwang.playexcel.config.Table;
 import cn.jianchengwang.playexcel.exception.ReaderException;
-import cn.jianchengwang.playexcel.metadata.SheetMd;
 import cn.jianchengwang.playexcel.reader.ReaderFactory;
 
 import java.io.File;
@@ -21,27 +21,27 @@ public class Reader<T> {
 
     private Charset charset = StandardCharsets.UTF_8;
 
-    private SheetMd<T> sheet;
+    private Table<T> table;
 
     private Stream<T> stream;
-    private Stream<SheetMd<T>> sheetMdStream;
+    private Stream<Table<T>> tableStream;
 
-    public Reader(SheetMd<T> sheet) {
-        this.sheet = sheet;
+    public Reader(Table<T> table) {
+        this.table = table;
     }
 
     public static <T> Reader<T> create(Class<T> modelType) {
-        SheetMd sheet = SheetMd.create(modelType);
+        Table sheet = Table.create(modelType);
         return new Reader<>(sheet);
     }
 
     public static <T> Reader<T> create(Class<T> modelType, File fromFile) {
-        SheetMd sheet = SheetMd.create(modelType);
+        Table sheet = Table.create(modelType);
         return new Reader<>(sheet).from(fromFile);
     }
 
     public static <T> Reader<T> create(Class<T> modelType, InputStream fromStream) {
-        SheetMd sheet = SheetMd.create(modelType);
+        Table sheet = Table.create(modelType);
         return new Reader<>(sheet).from(fromStream);
     }
 
@@ -59,8 +59,8 @@ public class Reader<T> {
         return this;
     }
 
-    public Stream<T> asStream() {
-        if (this.sheet == null) {
+    public Stream<Table<T>> asTableStream() {
+        if (this.table == null) {
             throw new IllegalArgumentException("modelType can be not null");
         }
 
@@ -70,11 +70,19 @@ public class Reader<T> {
 
         if (fromFile != null) {
             ReaderFactory.readByFile(this);
-            return this.stream;
+            return this.tableStream;
         } else {
             ReaderFactory.readByStream(this);
-            return this.stream;
+            return this.tableStream;
         }
+    }
+
+
+    public Stream<T> asStream() {
+
+        this.stream = this.asTableStream().flatMap(sheet -> sheet.data().stream());
+
+        return this.stream;
     }
 
 
@@ -95,25 +103,25 @@ public class Reader<T> {
         return this.charset;
     }
 
-    public SheetMd sheet() {
-        return this.sheet;
+    public Table table() {
+        return this.table;
     }
 
     public Stream<T> stream() {
         return this.stream;
     }
 
-    public Stream<SheetMd<T>> sheetMdStream() {
-        return this.sheetMdStream;
+    public Stream<Table<T>> tableStream() {
+        return this.tableStream;
+    }
+
+    public void tableStream(Stream<Table<T>> tableStream) {
+        this.tableStream = tableStream;
     }
 
     public void stream(Stream<T> stream) {
         this.stream = stream;
     }
 
-    public void sheetMdStream(Stream<SheetMd<T>> sheetMdStream) {
-        this.sheetMdStream = sheetMdStream;
-        this.stream = this.sheetMdStream().flatMap(sheet -> sheet.data().stream());
-    }
 
 }

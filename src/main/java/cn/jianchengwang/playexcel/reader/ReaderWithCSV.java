@@ -5,9 +5,6 @@ import cn.jianchengwang.playexcel.Reader;
 import cn.jianchengwang.playexcel.annotation.ExcelColumn;
 import cn.jianchengwang.playexcel.converter.Converter;
 import cn.jianchengwang.playexcel.exception.ReaderException;
-import cn.jianchengwang.playexcel.metadata.SheetMd;
-import cn.jianchengwang.playexcel.reader.ExcelReader;
-import cn.jianchengwang.playexcel.reader.ReaderConverter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.BufferedReader;
@@ -27,7 +24,7 @@ public class ReaderWithCSV extends ReaderConverter implements ExcelReader {
 
     @Override
     public <T> void readExcel(Reader reader) throws ReaderException {
-        Class type = reader.sheet().modelType();
+        Class type = reader.table().modelType();
 
         try {
             this.initFieldConverter(type.getDeclaredFields());
@@ -40,7 +37,7 @@ public class ReaderWithCSV extends ReaderConverter implements ExcelReader {
         try (BufferedReader br = new BufferedReader(
                 new InputStreamReader(inputStream, reader.charset()))) {
 
-            int startRow = reader.sheet().headLineRow();
+            int startRow = reader.table().headLineRow();
 
             int    pos  = 0;
             String line = "";
