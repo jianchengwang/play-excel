@@ -34,6 +34,7 @@ public class SheetToCSV<T> extends ReaderConverter implements XSSFSheetXMLHandle
 
     private final Table<T> tableConfig;
     private final ExtMsgConfig extMsgConfig;
+    private volatile int extMsgListIndex = 0;
 
     private T row;
     private final Stream.Builder<Table<T>> tableBuilder;
@@ -84,7 +85,7 @@ public class SheetToCSV<T> extends ReaderConverter implements XSSFSheetXMLHandle
     public void cell(String cellReference, String formattedValue,
                      XSSFComment comment) {
 
-        if (currentRow < startRow && !extMsgConfig.haveExtMsg()) {
+        if (currentRow < startRow && !tableConfig.haveHeadTitle() && !extMsgConfig.haveExtMsg()) {
             return;
         }
 
@@ -99,20 +100,28 @@ public class SheetToCSV<T> extends ReaderConverter implements XSSFSheetXMLHandle
 
         currentCol = (int) (new CellReference(cellReference)).getCol();
 
+        if(currentRow == 0 && currentCol == 0 && tableConfig.haveHeadTitle()) {
+            table.headTitle(formattedValue);
+        }
+
         if((currentRow+1) < startRow && extMsgConfig.haveExtMsg()) {
 
             if(tableConfig.haveHeadTitle() && currentRow == 0) return;
 
-            int extMsgListIndex = currentCol / (2 + extMsgConfig.extMsgColSpan());
-            if(currentRow>0) extMsgListIndex +=  currentRow + extMsgConfig.extMsgCol()*(currentRow-1) + 1;
+            if(extMsgListIndex == table.extMsgList().size()) return;
 
             ExtMsg extMsg = table.extMsgList().get(extMsgListIndex);
+
             if(currentCol % (2 + extMsgConfig.extMsgColSpan()) == 0) {
                 extMsg.setTitle(formattedValue);
-            } else {
+            } else if(currentCol % (2 + extMsgConfig.extMsgColSpan()) == 1){
                 extMsg.setMsg(formattedValue);
+
+                extMsgListIndex++;
             }
         } else {
+
+            extMsgListIndex = 0;
             Field field = fieldIndexes.get(currentCol);
             if (null != field) {
                 try {

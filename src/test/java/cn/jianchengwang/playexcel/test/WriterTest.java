@@ -2,15 +2,12 @@ package cn.jianchengwang.playexcel.test;
 
 import cn.jianchengwang.playexcel.Writer;
 import cn.jianchengwang.playexcel.config.Table;
-import cn.jianchengwang.playexcel.config.extmsg.ExtMsg;
 import cn.jianchengwang.playexcel.exception.WriterException;
 import cn.jianchengwang.playexcel.test.model.PerformanceTestModel;
 import cn.jianchengwang.playexcel.test.model.Sample;
 import org.junit.Test;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
 
 public class WriterTest extends BaseTest {
 
@@ -32,14 +29,17 @@ public class WriterTest extends BaseTest {
 //        Writer.create().withRows(readyData()).to(new File(EXCELPATH + fileName));
 
         // multi sheet
-        String fileName = "write_mul_test.xlsx";
+        String fileName = "mul_test.xls";
 
         Writer.create()
-                .witchTable(Table.create(PerformanceTestModel.class,0,"sheet1")
+                .withTable(Table.create(PerformanceTestModel.class,0,"sheet1")
                         .headTitle("sheet1")
                         .data(readyData())
-                        .extMsgList(buildExtMsg()))
-                .witchTable(Table.create(Sample.class, 1, "sheet2").headTitle("sheet2").data(buildData()))
+                        .extMsgList(buildExtMsg(), 1))
+                .withTable(Table.create(Sample.class, 1, "sheet2")
+                        .headTitle("sheet2").data(buildData())
+                        .extMsgList(buildExtMsg(), 2))
+
                 .to(new File(EXCELPATH + fileName));
         System.out.println((System.currentTimeMillis() - beginTime)/1000);
 //        deleteTempFile(fileName);

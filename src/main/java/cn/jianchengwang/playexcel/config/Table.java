@@ -10,6 +10,8 @@ import java.util.List;
 
 public class Table<T> {
 
+    private int startRow = 0;
+
     private String headTitle; // 标题
     private boolean haveHeadTitle;
 
@@ -56,6 +58,15 @@ public class Table<T> {
         return new Table(modelType, sheetIndex, sheetName);
     }
 
+    public Table startRow(int startRow) {
+        this.startRow = startRow;
+        return this;
+    }
+
+    public int startRow() {
+        return this.startRow;
+    }
+
     public Table headTitle(String headTitle) {
         this.headTitle = headTitle;
 
@@ -65,6 +76,11 @@ public class Table<T> {
 
     public String headTitle() {
         return this.headTitle;
+    }
+
+    public Table<T> haveHeadTitle(boolean haveHeadTitle) {
+        this.haveHeadTitle = haveHeadTitle;
+        return this;
     }
 
     public boolean haveHeadTitle() {

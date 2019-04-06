@@ -5,7 +5,6 @@ import cn.jianchengwang.playexcel.Writer;
 import cn.jianchengwang.playexcel.annotation.ExcelColumn;
 import cn.jianchengwang.playexcel.config.Table;
 import cn.jianchengwang.playexcel.config.extmsg.ExtMsg;
-import cn.jianchengwang.playexcel.config.extmsg.ExtMsgConfig;
 import cn.jianchengwang.playexcel.converter.*;
 import cn.jianchengwang.playexcel.exception.WriterException;
 import cn.jianchengwang.playexcel.kit.StrKit;
@@ -46,10 +45,11 @@ public abstract class ExcelWriter {
             tables = new ArrayList<>();
             tables.add(
                     Table.create(Object.class, 0, writer.sheetName())
-                            .data(writer.rows())
-                            .styleConfig(writer.styleConfig())
+                            .startRow(writer.startRow())
                             .headLineRow(writer.startRow())
                             .headTitle(writer.headerTitle())
+                            .data(writer.rows())
+                            .styleConfig(writer.styleConfig())
             );
         }
 
@@ -132,17 +132,20 @@ public abstract class ExcelWriter {
                         .get();
 
                 this.writeHeader(titleStyle, sheet, title, maxColIndex);
+
                 colRowIndex = 1;
             }
 
             // write extMsg
             if(table.extMsgConfig().haveExtMsg()) {
                 this.writeExtMsgList(sheet, table);
+
+                colRowIndex += (table.extMsgConfig().extMsgRow() + 1);
             }
 
-            this.rowNum = writer.startRow();
+            this.rowNum = table.startRow();
             if (this.rowNum == 0) {
-                this.rowNum = colRowIndex + 1;
+                this.rowNum = colRowIndex + table.headLineRow();
             }
 
             try {
@@ -186,22 +189,26 @@ public abstract class ExcelWriter {
         int s = table.extMsgConfig().extMsgColSpan();
         List<ExtMsg> extMsgList = table.extMsgList();
 
-        for(int ri=startRow; ri<startRow + r; ri++) {
+        int extMsgListIndex = 0;
+        for(int ri=0; ri<table.extMsgConfig().extMsgRow(); ri++) {
 
-            Row row = sheet.createRow(ri);
+            Row row = sheet.createRow(ri + startRow);
 
-            for(int ci=0; ci<(2 + s)*c; ci++) {
+            for(int ci=0; ci<(2 + s)*c-1; ci++) {
 
-                int extMsgListIndex = ci / (2 + s);
-                if(ri>startRow) extMsgListIndex +=  ri + c*(ri-1) + 1;
+                if(extMsgListIndex == extMsgList.size()) return;
 
                 ExtMsg extMsg = extMsgList.get(extMsgListIndex);
+
                 if(ci % (2 + s) == 0) {
                     Cell cell = row.createCell(ci);
                     cell.setCellValue(extMsg.getTitle());
-                } else {
+                } else if(ci % (2 + s) == 1){
                     Cell cell = row.createCell(ci);
                     cell.setCellValue(extMsg.getMsg());
+
+                    ci += s;
+                    extMsgListIndex++;
                 }
             }
 

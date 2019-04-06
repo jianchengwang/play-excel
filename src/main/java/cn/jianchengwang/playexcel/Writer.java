@@ -260,7 +260,7 @@ public class Writer {
         return this.charset;
     }
 
-    public Writer witchTable(Table<?> table) {
+    public Writer withTable(Table<?> table) {
         if(this.tables == null) this.tables = new ArrayList<>();
         this.tables.add(table); this.haveMultipleSheet = true;
         return this;

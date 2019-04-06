@@ -28,6 +28,7 @@ public class ExtMsgConfig {
 
         ExtMsgConfig extMsgConfig = new ExtMsgConfig(true);
         extMsgConfig.extMsgTotal(extMsgTotal);
+        extMsgConfig.extMsgRow(extMsgTotal % extMsgConfig.extMsgCol() == 0? extMsgTotal / extMsgConfig.extMsgCol(): extMsgTotal / extMsgConfig.extMsgCol() + 1);
 
         return extMsgConfig;
     }

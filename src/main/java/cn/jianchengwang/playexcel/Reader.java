@@ -103,6 +103,11 @@ public class Reader<T> {
         return this.charset;
     }
 
+    public Reader<T> table(Table table) {
+        this.table = table;
+        return this;
+    }
+
     public Table table() {
         return this.table;
     }

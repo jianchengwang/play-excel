@@ -2,6 +2,7 @@ package cn.jianchengwang.playexcel.test;
 
 import cn.jianchengwang.playexcel.Reader;
 import cn.jianchengwang.playexcel.config.Table;
+import cn.jianchengwang.playexcel.config.extmsg.ExtMsgConfig;
 import cn.jianchengwang.playexcel.exception.ReaderException;
 import cn.jianchengwang.playexcel.test.model.Book;
 import cn.jianchengwang.playexcel.test.model.PerformanceTestModel;
@@ -99,18 +100,23 @@ public class ReaderTest extends BaseTest {
 
         Long beginTime = System.currentTimeMillis();
 
-        Reader<PerformanceTestModel> reader = Reader.create(PerformanceTestModel.class);
+        Reader<PerformanceTestModel> reader = Reader.create(PerformanceTestModel.class).table(
+                Table.create(PerformanceTestModel.class).extMsgConfig(5).haveHeadTitle(true).sheetIndex(0)
+        );
 
-        reader.from(new File(EXCELPATH + "/write_test.xlsx"));
+        reader.from(new File(EXCELPATH + "/mul_test.xlsx"));
 
-        Stream<PerformanceTestModel> stream  = reader.asStream();
-        List<PerformanceTestModel>   performanceTestModels = stream.collect(Collectors.toList());
+        Stream<Table<PerformanceTestModel>> tableStream = reader.asTableStream();
+        List<Table> tables = tableStream.collect(Collectors.toList());
+
+
+
+//        Stream<PerformanceTestModel> stream  = reader.asStream();
+//        List<PerformanceTestModel>   performanceTestModels = stream.collect(Collectors.toList());
 
         System.out.println((System.currentTimeMillis() - beginTime)/1000);
 
-        assertNotNull(stream);
-        assertNotNull(performanceTestModels);
-        assertEquals(10000, performanceTestModels.size());
+        assertNotNull(tableStream);
 
 
     }

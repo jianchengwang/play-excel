@@ -40,7 +40,7 @@ public class ReaderWith2003 extends ReaderConverter implements ExcelReader {
 
             Table tableConfig = reader.table();
             ExtMsgConfig extMsgConfig = tableConfig.extMsgConfig();
-            boolean haveHeadTitle = tableConfig.headTitle() != null ? true: false;
+            boolean haveHeadTitle = tableConfig.haveHeadTitle();
             boolean haveExtMsg = extMsgConfig.haveExtMsg();
 
             int extMsgRow = 0;
@@ -56,16 +56,20 @@ public class ReaderWith2003 extends ReaderConverter implements ExcelReader {
                     sheet = getSheet(reader);
                 }
 
-                Table<T> table = Table.create(tableConfig.modelType(), si, sheet.getSheetName()).initExtMsgList(extMsgConfig.extMsgTotal());
+                Table<T> table = Table.create(tableConfig.modelType(), si, sheet.getSheetName()).initExtMsgList(extMsgConfig.extMsgTotal()).haveHeadTitle(haveHeadTitle);
 
                 int startRow = 0;
-                if(haveHeadTitle) startRow = 1;
+                if(haveHeadTitle) {
+                    startRow += 1;
+
+                    table.headTitle(sheet.getRow(0).getCell(0).getStringCellValue());
+                }
 
                 if(haveExtMsg) {
 
                     List<ExtMsg> extMsgList = table.extMsgList();
-                    for(int ri=startRow; ri<extMsgRow; ri++) {
-                        Row row = sheet.getRow(ri);
+                    for(int ri=0; ri<extMsgRow; ri++) {
+                        Row row = sheet.getRow(ri + startRow);
                         if (null == row) {
                             continue;
                         }
@@ -83,11 +87,11 @@ public class ReaderWith2003 extends ReaderConverter implements ExcelReader {
                     }
                 }
 
-                if(haveExtMsg) startRow = startRow + table.headLineRow() + extMsgRow + 1;
+                if(haveExtMsg) startRow = startRow + extMsgRow + 1 + table.headLineRow();
                 int totalRow = sheet.getPhysicalNumberOfRows();
 
                 List<T> data = new ArrayList<>();
-                for (int ri = startRow; ri < totalRow; ri++) {
+                for (int ri = startRow; ri <= totalRow; ri++) {
 
                     Row row = sheet.getRow(ri);
                     if (null == row) {
