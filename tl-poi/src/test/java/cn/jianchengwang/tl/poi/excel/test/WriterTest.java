@@ -11,7 +11,7 @@ import java.io.File;
 
 public class WriterTest extends BaseTest {
 
-    private final String EXCELPATH = "/home/wjc/ext/workspace/IdeaProjects/play-excel/out/test/resources/";
+    private final String EXCELPATH = "/home/wjc/ext/workspace/IdeaProjects/tl-lib/tl-poi/out/test/resources/";
 
     @Test
     public void testWriteCSV() throws WriterException {

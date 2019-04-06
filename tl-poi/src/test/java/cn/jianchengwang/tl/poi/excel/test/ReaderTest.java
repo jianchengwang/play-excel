@@ -18,7 +18,7 @@ import static org.junit.Assert.assertNotNull;
 
 public class ReaderTest extends BaseTest {
 
-    private final String EXCELPATH = "/home/wjc/ext/workspace/IdeaProjects/play-excel/out/test/resources/";
+    private final String EXCELPATH = "/home/wjc/ext/workspace/IdeaProjects/tl-lib/tl-poi/out/test/resources/";
 
     @Test
     public void testReadByFileXLSX() throws ReaderException {

@@ -1,6 +1,6 @@
 package cn.jianchengwang.tl.poi.excel.exception;
 
-public class ConverterException extends PlayExcelException {
+public class ConverterException extends ExcelException {
 
     public ConverterException() {
     }

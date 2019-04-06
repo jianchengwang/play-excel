@@ -1,6 +1,6 @@
 package cn.jianchengwang.tl.poi.excel.exception;
 
-public class WriterException extends PlayExcelException {
+public class WriterException extends ExcelException {
 
     public WriterException() {
     }
