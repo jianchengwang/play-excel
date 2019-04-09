@@ -14,10 +14,10 @@ public class MultiHeaderBook {
     @ExcelColumn(title = {"基本信息", "作者"}, index = 1)
     private String author;
 
-    @ExcelColumn(title = "售价", index = 2)
+    @ExcelColumn(title = {"附加信息", "售价"}, index = 2)
     private Double price;
 
-    @ExcelColumn(title = "出版日期", index = 3, format = "yyyy年M月")
+    @ExcelColumn(title = {"附加信息", "出版日期"}, index = 3, format = "yyyy年M月")
     private LocalDate publishDate;
 
     public MultiHeaderBook() {
