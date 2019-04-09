@@ -3,6 +3,7 @@ package cn.jianchengwang.tl.poi.excel.test;
 import cn.jianchengwang.tl.poi.excel.Writer;
 import cn.jianchengwang.tl.poi.excel.config.extmsg.ExtMsg;
 import cn.jianchengwang.tl.poi.excel.exception.WriterException;
+import cn.jianchengwang.tl.poi.excel.test.model.MultiHeaderBook;
 import cn.jianchengwang.tl.poi.excel.test.model.PerformanceTestModel;
 import cn.jianchengwang.tl.poi.excel.test.model.Sample;
 import lombok.extern.slf4j.Slf4j;
@@ -13,10 +14,7 @@ import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
-import java.util.UUID;
+import java.util.*;
 
 @Slf4j
 public class BaseTest {
@@ -34,6 +32,16 @@ public class BaseTest {
         samples.add(new Sample(LocalDate.now(), "数据项04", 104));
         samples.add(new Sample(LocalDate.now(), "hello05", 105));
         return samples;
+    }
+
+    protected List<MultiHeaderBook> buildMultiHeaderBook() {
+        List<MultiHeaderBook> books = new ArrayList<>();
+        books.add(new MultiHeaderBook("新名字的故事", "埃莱娜·费兰特", 59.0, LocalDate.now()));
+        books.add(new MultiHeaderBook("不可思议的朋友", "哈哈哈", 79.0, LocalDate.now()));
+        books.add(new MultiHeaderBook("明月泪", "猫九大大", 29.0, LocalDate.now()));
+        books.add(new MultiHeaderBook("温柔刀", "猫九大大", 49.0, LocalDate.now()));
+        books.add(new MultiHeaderBook("端到草席", "猫九大大", 99.0, LocalDate.now()));
+        return books;
     }
 
     protected List<PerformanceTestModel> readyData() {

@@ -7,6 +7,7 @@ import cn.jianchengwang.tl.poi.excel.config.style.StyleConfig;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 public class Table<T> {
 

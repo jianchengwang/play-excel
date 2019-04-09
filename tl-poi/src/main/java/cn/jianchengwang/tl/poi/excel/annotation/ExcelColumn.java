@@ -12,7 +12,7 @@ import java.lang.annotation.Target;
 @Target(ElementType.FIELD)
 public @interface ExcelColumn {
 
-    String title() default "";
+    String[] title() default {""};
 
     int index() default -1;
 

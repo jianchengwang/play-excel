@@ -3,6 +3,7 @@ package cn.jianchengwang.tl.poi.excel.test;
 import cn.jianchengwang.tl.poi.excel.Writer;
 import cn.jianchengwang.tl.poi.excel.config.Table;
 import cn.jianchengwang.tl.poi.excel.exception.WriterException;
+import cn.jianchengwang.tl.poi.excel.test.model.MultiHeaderBook;
 import cn.jianchengwang.tl.poi.excel.test.model.PerformanceTestModel;
 import cn.jianchengwang.tl.poi.excel.test.model.Sample;
 import org.junit.Test;
@@ -29,17 +30,29 @@ public class WriterTest extends BaseTest {
 //        Writer.create().withRows(readyData()).to(new File(EXCELPATH + fileName));
 
         // multi sheet
-        String fileName = "mul_test.xls";
+//        String fileName = "mul_sheet_test.xls";
+//        Writer.create()
+//                .withTable(Table.create(PerformanceTestModel.class,0,"sheet1")
+//                        .headTitle("sheet1")
+//                        .data(readyData())
+//                        .extMsgList(buildExtMsg(), 1))
+//                .withTable(Table.create(Sample.class, 1, "sheet2")
+//                        .headTitle("sheet2").data(buildData())
+//                        .extMsgList(buildExtMsg(), 2))
+//                .to(new File(EXCELPATH + fileName));
 
+
+        // multi header
+        String fileName = "mul_header_test.xls";
         Writer.create()
-                .withTable(Table.create(PerformanceTestModel.class,0,"sheet1")
-                        .headTitle("sheet1")
-                        .data(readyData())
+                .withTable(Table.create(MultiHeaderBook.class,0,"books")
+                        .headTitle("books")
+                        .headLineRow(2)
+                        .data(buildMultiHeaderBook())
                         .extMsgList(buildExtMsg(), 1))
-                .withTable(Table.create(Sample.class, 1, "sheet2")
-                        .headTitle("sheet2").data(buildData())
+                .withTable(Table.create(Sample.class, 1, "sample")
+                        .headTitle("sample").data(buildData())
                         .extMsgList(buildExtMsg(), 2))
-
                 .to(new File(EXCELPATH + fileName));
         System.out.println((System.currentTimeMillis() - beginTime)/1000);
 //        deleteTempFile(fileName);
