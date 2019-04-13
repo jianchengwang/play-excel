@@ -9,10 +9,8 @@ import cn.jianchengwang.tl.poi.excel.exception.WriterException;
 import cn.jianchengwang.tl.poi.excel.kit.StrKit;
 import cn.jianchengwang.tl.poi.excel.config.style.StyleConfig;
 import cn.jianchengwang.tl.poi.excel.converter.*;
-import com.sun.javafx.scene.control.behavior.OptionalBoolean;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.poi.hssf.usermodel.HSSFRow;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
 
@@ -21,8 +19,6 @@ import java.lang.reflect.Field;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentSkipListMap;
 
 import static java.util.Comparator.comparingInt;
 
@@ -240,10 +236,10 @@ public abstract class ExcelWriter {
             }
         } else {
             // 迭代Map集合，并重构一套“根目录”
-            HeaderColumnNode root = new HeaderColumnNode();
-            List<HeaderColumnNode> headerColumnNodes = root.build(columns);
+            Node root = new Node();
+            List<Node> nodes = root.build(columns);
 
-            final int rootDeepLength = root.getDeep();
+            int rootDeepLength = root.getDeepLength();
 
             // 创建多个行，并用数组存储
             Row[] rows = new Row[rootDeepLength];
@@ -251,121 +247,65 @@ public abstract class ExcelWriter {
                 rows[i] = sheet.createRow(rowIndex + i);
             }
 
-
-            //4.2 遍历所有结点
             int columnIndex = 0;
-            for(String text: root.map.keySet()) {
-                columnIndex += writeColumnName(sheet, root.map.get(text), rows, rootDeepLength, rowIndex, columnIndex);
-            }
+            int firstRow = 0;
+            int lastRow = 0;
+            int firstCol = 0;
+            int lastCol = 0;
+            for (Node node : nodes) {
 
-//            int columnIndex = 0;
-//            for (HeaderColumnNode node : headerColumnNodes) {
-//                //获取该节点的深度
-//                int deep = node.getDeep();
-//                System.out.println(deep);
-//                //从下往上取行，向右创建
-//                int topRowIndex = rows.length - deep - 1;//计算这个结点的控制范围上限
-//                for (int i = 0; i <= deep; i++) {
-//                    rows[i].createCell(columnIndex);
-//                }
-//                rows[topRowIndex].getCell(columnIndex).setCellValue(node.getText());
-//
-//                if(deep == 0) {
-//                    columnIndex++;
-//                }
-//            }
+                firstRow = 0;
+                lastRow = 0;
+                firstCol = columnIndex;
+                lastCol = columnIndex;
 
-//            int[] columnIndexArr = new int[rootDeepLength];
-//
-//            // 遍历所有结点
-//            for (HeaderColumnNode node : headerColumnNodes) {
-//                //获取该节点的深度
-//                int deep = node.getDeep();
-//                //深度为0，这是普通一级结点
-//                if (deep == 0) {
-//                    //从下往上取行，向右创建
-//                    int topRowIndex = node.getDeep();//获取这个结点的控制范围上限
-//                    int bottomRowIndex = rows.length - deep - 1;//计算这个结点的控制范围下限
-//                    for (int i = rows.length - 1; i >= 0; i--) {
-//                        rows[i].createCell(columnIndexArr[i]);
-//                    }
-//                    rows[topRowIndex].getCell(columnIndexArr[topRowIndex]).setCellValue(node.getText());
-//                    //一列多行，但如果只有一行，就没有必要合并了
-//                    if (topRowIndex != bottomRowIndex) {
-////                        sheet.addMergedRegion(new CellRangeAddress(rowIndex + topRowIndex, rowIndex + bottomRowIndex, columnIndexArr[topRowIndex], columnIndexArr[topRowIndex]));
-//                    }
-//                    //涉及到的列的下标数组统一往后推一格
-//                    for (int i = topRowIndex; i <= bottomRowIndex; i++) {
-//                        columnIndexArr[i] += 1;
-//                    }
-//                    //最后一行一定全是叶子结点，要控制列宽
-////                    sheet.setColumnWidth(columnIndexArr[columnIndexArr.length - 1], node.getWidth() * 2 * 256);
-//                }else {
-//                    //深度不为0，复合结点，需要复杂构建
-//                    //从下往上取行，向右创建
-//                    int topRowIndex = node.getDeep();//获取这个结点的控制范围上限
-//                    int bottomRowIndex = rows.length - deep - 1;//计算这个结点的控制范围下限
-//                    int childrenCount = node.getChildrenCount();
-//                    //并行创建，能控制到的每一行都要创建足够的容量使得下面的叶子结点能放得下
-//                    for (int i = bottomRowIndex; i >= topRowIndex; i--) {
-//                        for (int j = 0; j < childrenCount; j++) {
-//                            rows[i].createCell(columnIndexArr[i] + j);
-//                        }
-//                        columnIndexArr[i] += childrenCount;
-//                    }
-//                    //填充值，合并单元格（不需要判定是否为一个单元格）
-//                    rows[bottomRowIndex].getCell(columnIndexArr[bottomRowIndex] - childrenCount).setCellValue(node.getText());
-//                    sheet.addMergedRegion(new CellRangeAddress(rowIndex + topRowIndex, rowIndex + bottomRowIndex, columnIndexArr[topRowIndex] - childrenCount, columnIndexArr[topRowIndex] - 1));
-//                }
-//            }
-//            rowIndex += rows.length;
+                //获取该节点的深度
+                int deep = node.getDeep();
+                System.out.println(deep);
+                //从下往上取行，向右创建
 
-            //表头的数据应该是很多单元格的合并、居中
-            //四个参数：开始行，结束行，开始列，结束列
-            //因为上面加了1，这里还要抵消掉
-//            sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, columnIndexArr[columnIndexArr.length - 1] - 1));
-        }
-    }
+                for (int i = 0; i <= deep; i++) {
 
-    private int writeColumnName(Sheet sheet, HeaderColumnNode node, Row[] rows, int rootDeep, int rowIndex, int columnIndex) {
+                    if(rows[i].getCell(columnIndex) == null) {
+                        rows[i].createCell(columnIndex);
 
-        if (node.map != null && node.map.size() > 0) {
+                        if(firstRow == 0) firstRow = i;
+                        lastRow = i;
+                    }
+                }
+                rows[deep].getCell(columnIndex).setCellValue(node.getText());
 
-            for(int i=node.deep; i<rootDeep-1; i++) {
-                for(int j=columnIndex; j<columnIndex + node.map.size(); j++) {
-                    rows[i].createCell(j);
+                if(node.map.size() > 0) {
+                    columnIndex += node.map.size() - 1;
+                    lastCol = columnIndex;
+
+                } else {
+                    columnIndex++;
+
+                    if(node.deep> 0 && node.getChildrenCount() == 1) {
+                        lastRow = rootDeepLength - node.getDeep();
+
+                    } else {
+                        lastRow = rootDeepLength - node.getDeep() - node.getChildrenCount();
+                    }
+                }
+
+                if(node.deep >= 0 && node.map.size() > 1) {
+                    columnIndex--;
+                }
+
+                if(lastRow > firstRow || lastCol > firstCol) {
+
+                    // 合并父节点单元格
+                    if(lastCol > firstCol && firstRow > 0) {
+                        sheet.addMergedRegion(new CellRangeAddress(firstRow+rowIndex-1, firstRow+rowIndex-1, firstCol, lastCol));
+                    }
+
+                    // 合并当前节点单元格
+                    sheet.addMergedRegion(new CellRangeAddress(firstRow+rowIndex, lastRow+rowIndex, firstCol, lastCol));
                 }
             }
-            rows[node.deep].getCell(columnIndex).setCellValue(node.text);
-            System.out.println(node.deep + ":" + columnIndex + ":" + node.text);
-            if(node.deep > 0 || node.map.size() - 1 > 0) {
-                sheet.addMergedRegion(new CellRangeAddress(rowIndex , rowIndex + node.deep, columnIndex, columnIndex + node.map.size() - 1));
-            }
-
-            for(String text: node.map.keySet()) {
-
-                if(node.map.get(text) != null && node.map.size()>0) {
-                    columnIndex += writeColumnName(sheet, node.map.get(text), rows, rootDeep, rowIndex, columnIndex);
-                }
-            }
-
-            return node.map.size();
-
-        } else {
-
-            for(int i=node.deep; i<rootDeep; i++) {
-                rows[i].createCell(columnIndex);
-            }
-            rows[node.deep].getCell(columnIndex).setCellValue(node.text);
-
-            if(rootDeep - node.deep - 1 > 0) {
-                sheet.addMergedRegion(new CellRangeAddress(rowIndex , rowIndex + node.deep + 1, columnIndex, columnIndex));
-            }
-            System.out.println(node.deep + ":" + columnIndex + ":" + node.text);
-
-            return 1;
         }
-
     }
 
     private void writeRow(Sheet sheet, Object instance, CellStyle columnStyle) throws Exception {
@@ -424,13 +364,13 @@ public abstract class ExcelWriter {
     }
 
     @Data
-    private class HeaderColumnNode {
+    private class Node {
         private String text; // 文本信息
         private Integer width; //这个单元格应该在Excel中占有的宽度
         private Integer deep; // 单元格深度
-        private Map<String, HeaderColumnNode> map; // 子节点 map 集合
+        private Map<String, Node> map; // 子节点 map 集合
 
-        public HeaderColumnNode(String text, Integer width, Integer deep) {
+        public Node(String text, Integer width, Integer deep) {
             this.text = text;
             this.width = width;
             this.deep = deep;
@@ -438,41 +378,45 @@ public abstract class ExcelWriter {
             this.map = new LinkedHashMap<>();
         }
 
-        public HeaderColumnNode(String text, Integer width) {
+        public Node(String text, Integer width) {
             this.text = text;
             this.width = width;
 
             this.map = new LinkedHashMap<>();
         }
-        public HeaderColumnNode(String text) {
+        public Node(String text) {
             this.text = text;
             this.map = new LinkedHashMap<>();
         }
-        public HeaderColumnNode() {
+        public Node() {
             this.map = new LinkedHashMap<>();
         }
 
          // 添加节点
        void add(String[] text, Integer width) {
 
-           Map<String, HeaderColumnNode> rootMap = map;
+           Map<String, Node> rootMap = map;
 
-           HeaderColumnNode node =  null;
+           Node node =  null;
             //读到叶子结点的前一个结点处
            for (int i = 0; i < text.length-1; i++) {
                //逐层目录读取，如果没有get到，就创建一个新的目录
                node = rootMap.get(text[i]);
                if (node == null) {
-                   node = new HeaderColumnNode(text[i]);
+                   node = new Node(text[i]);
                    rootMap.put(text[i], node);
                }
                //新目录的大小要同步上
                if(node.getWidth() == null) node.setWidth(Constant.DEFAULT_COLUMN_WIDTH);
                node.setWidth(node.getWidth() + width);
+
+               // 设置深度
+               if(node.getDeep() == null) node.setDeep(i);
+
                rootMap = node.getMap();
            }
            //此时的rootMap就是叶子结点所在的目录
-           rootMap.put(text[text.length - 1], new HeaderColumnNode(text[text.length - 1], width, text.length - 1));
+           rootMap.put(text[text.length - 1], new Node(text[text.length - 1], width, text.length - 1));
 
            //还要给这个文件的父文件夹设置deep
            if (node != null) {
@@ -481,9 +425,9 @@ public abstract class ExcelWriter {
         }
 
         // 得到节点集合
-        List<HeaderColumnNode> parse() {
-            List<HeaderColumnNode> list = new ArrayList<>();
-            for (Map.Entry<String, HeaderColumnNode> entry : map.entrySet()) {
+        List<Node> parse() {
+            List<Node> list = new ArrayList<>();
+            for (Map.Entry<String, Node> entry : map.entrySet()) {
                 //先把自己保存进去
                 list.add(entry.getValue());
                 //如果该节点的map不是空集合，证明这是一个“文件夹”（根节点）
@@ -496,13 +440,13 @@ public abstract class ExcelWriter {
         }
 
         // 计算深度
-        int getDeep() {
+        int getDeepLength() {
             if (map.isEmpty()) {
                 return 0;
             }
             List<Integer> list = new ArrayList<>();
-            for (Map.Entry<String, HeaderColumnNode> entry : map.entrySet()) {
-                list.add(entry.getValue().getDeep());
+            for (Map.Entry<String, Node> entry : map.entrySet()) {
+                list.add(entry.getValue().getDeepLength());
             }
             Collections.sort(list);
             return list.get(list.size() - 1) + 1;
@@ -514,13 +458,13 @@ public abstract class ExcelWriter {
                 return 1; //就自己一个
             }
             int count = 0;
-            for (Map.Entry<String, HeaderColumnNode> entry : map.entrySet()) {
+            for (Map.Entry<String, Node> entry : map.entrySet()) {
                 count += entry.getValue().getChildrenCount();
             }
             return count;
         }
 
-        List<HeaderColumnNode> build(List<ExcelColumn> columns) {
+        List<Node> build(List<ExcelColumn> columns) {
 
             for(ExcelColumn column: columns) {
                 add(column.title(), column.width()>0? column.width(): Constant.DEFAULT_COLUMN_WIDTH);
