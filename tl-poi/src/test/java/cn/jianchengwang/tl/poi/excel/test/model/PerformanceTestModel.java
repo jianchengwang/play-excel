@@ -15,7 +15,7 @@ public class PerformanceTestModel {
     @ExcelColumn(title = "UUID", index = 1, width = 50 * 256)
     private String uuid;
 
-    @ExcelColumn(title = "日期", index = 2, format = "yyyy年MM月dd日")
+    @ExcelColumn(title = "日期", index = 2, dateFormat = "yyyy年MM月dd日")
     private LocalDate date;
 
     @ExcelColumn(title = "余额", index = 3)

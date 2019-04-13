@@ -17,7 +17,7 @@ public class Book {
     @ExcelColumn(title = "售价", index = 2)
     private Double price;
 
-    @ExcelColumn(title = "出版日期", index = 3, format = "yyyy年M月")
+    @ExcelColumn(title = "出版日期", index = 3, dateFormat = "yyyy年M月")
     private LocalDate publishDate;
 
     public Book() {

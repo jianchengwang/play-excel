@@ -9,7 +9,7 @@ import java.time.LocalDate;
 @Data
 public class Sample {
 
-    @ExcelColumn(title = "日期", index = 0, format = "M/d/yy")
+    @ExcelColumn(title = "日期", index = 0, dateFormat = "M/d/yy")
     private LocalDate date;
 
     @ExcelColumn(title = "地区", index = 1)

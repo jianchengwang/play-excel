@@ -2,6 +2,7 @@ package cn.jianchengwang.tl.poi.excel.test;
 
 import cn.jianchengwang.tl.poi.excel.Writer;
 import cn.jianchengwang.tl.poi.excel.config.Table;
+import cn.jianchengwang.tl.poi.excel.enums.ExcelType;
 import cn.jianchengwang.tl.poi.excel.exception.WriterException;
 import cn.jianchengwang.tl.poi.excel.test.model.MultiHeaderBook;
 import cn.jianchengwang.tl.poi.excel.test.model.PerformanceTestModel;

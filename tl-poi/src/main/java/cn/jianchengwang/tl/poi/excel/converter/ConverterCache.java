@@ -76,13 +76,13 @@ public class ConverterCache {
             return ConverterCache.getConvert(DecimalConverter.class);
         }
         else if (fieldType.equals(Date.class)) {
-            String pattern = field.getAnnotation(ExcelColumn.class).format();
+            String pattern = field.getAnnotation(ExcelColumn.class).dateFormat();
             return new DateConverter(pattern);
         } else if (fieldType.equals(LocalDate.class)) {
-            String pattern = field.getAnnotation(ExcelColumn.class).format();
+            String pattern = field.getAnnotation(ExcelColumn.class).dateFormat();
             return new LocalDateConverter(pattern);
         } else if (fieldType.equals(LocalDateTime.class)) {
-            String pattern = field.getAnnotation(ExcelColumn.class).format();
+            String pattern = field.getAnnotation(ExcelColumn.class).dateFormat();
             return new LocalDateTimeConverter(pattern);
         }
         return null;

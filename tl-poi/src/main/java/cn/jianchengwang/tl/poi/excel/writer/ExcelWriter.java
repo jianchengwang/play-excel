@@ -5,14 +5,23 @@ import cn.jianchengwang.tl.poi.excel.Writer;
 import cn.jianchengwang.tl.poi.excel.annotation.ExcelColumn;
 import cn.jianchengwang.tl.poi.excel.config.Table;
 import cn.jianchengwang.tl.poi.excel.config.extmsg.ExtMsg;
+import cn.jianchengwang.tl.poi.excel.config.options.Options;
+import cn.jianchengwang.tl.poi.excel.enums.ExcelType;
 import cn.jianchengwang.tl.poi.excel.exception.WriterException;
 import cn.jianchengwang.tl.poi.excel.kit.StrKit;
 import cn.jianchengwang.tl.poi.excel.config.style.StyleConfig;
 import cn.jianchengwang.tl.poi.excel.converter.*;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.poi.hssf.usermodel.HSSFClientAnchor;
+import org.apache.poi.hssf.usermodel.HSSFRichTextString;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
+import org.apache.poi.ss.util.CellRangeAddressList;
+import org.apache.poi.xssf.streaming.SXSSFWorkbook;
+import org.apache.poi.xssf.usermodel.XSSFClientAnchor;
+import org.apache.poi.xssf.usermodel.XSSFRichTextString;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import java.io.OutputStream;
 import java.lang.reflect.Field;
@@ -151,7 +160,7 @@ public abstract class ExcelWriter {
 
             try {
                 // write column header
-                this.writeColumnNames(sheet, table, colRowIndex, headerStyle);
+                this.writeColHeader(sheet, table, colRowIndex, headerStyle);
 
                 // write rows
                 for (Object row : rows) {
@@ -218,150 +227,8 @@ public abstract class ExcelWriter {
 
     }
 
-    private void writeColumnNames(Sheet sheet, Table table, int rowIndex, CellStyle headerStyle) {
 
-        if(table.headLineRow() == 1) {
-            Row rowHead = sheet.createRow(rowIndex);
-            for (ExcelColumn column : columns) {
-                Cell cell = rowHead.createCell(column.index());
-                if (null != headerStyle) {
-                    cell.setCellStyle(headerStyle);
-                }
-                cell.setCellValue(column.title()[0]);
-                if (column.width() > 0) {
-                    sheet.setColumnWidth(column.index(), column.width());
-                } else {
-                    sheet.setColumnWidth(column.index(), Constant.DEFAULT_COLUMN_WIDTH);
-                }
-            }
-        } else {
-            // 迭代Map集合，并重构一套“根目录”
-            Node root = new Node();
-            List<Node> nodes = root.build(columns);
 
-            int rootDeepLength = root.getDeepLength();
-
-            // 创建多个行，并用数组存储
-            Row[] rows = new Row[rootDeepLength];
-            for (int i = 0; i < rows.length; i++) {
-                rows[i] = sheet.createRow(rowIndex + i);
-            }
-
-            int columnIndex = 0;
-            int firstRow = 0;
-            int lastRow = 0;
-            int firstCol = 0;
-            int lastCol = 0;
-            for (Node node : nodes) {
-
-                firstRow = 0;
-                lastRow = 0;
-                firstCol = columnIndex;
-                lastCol = columnIndex;
-
-                //获取该节点的深度
-                int deep = node.getDeep();
-                System.out.println(deep);
-                //从下往上取行，向右创建
-
-                for (int i = 0; i <= deep; i++) {
-
-                    if(rows[i].getCell(columnIndex) == null) {
-                        rows[i].createCell(columnIndex);
-
-                        if(firstRow == 0) firstRow = i;
-                        lastRow = i;
-                    }
-                }
-                rows[deep].getCell(columnIndex).setCellValue(node.getText());
-
-                if(node.map.size() > 0) {
-                    columnIndex += node.map.size() - 1;
-                    lastCol = columnIndex;
-
-                } else {
-                    columnIndex++;
-
-                    if(node.deep> 0 && node.getChildrenCount() == 1) {
-                        lastRow = rootDeepLength - node.getDeep();
-
-                    } else {
-                        lastRow = rootDeepLength - node.getDeep() - node.getChildrenCount();
-                    }
-                }
-
-                if(node.deep >= 0 && node.map.size() > 1) {
-                    columnIndex--;
-                }
-
-                if(lastRow > firstRow || lastCol > firstCol) {
-
-                    // 合并父节点单元格
-                    if(lastCol > firstCol && firstRow > 0) {
-                        sheet.addMergedRegion(new CellRangeAddress(firstRow+rowIndex-1, firstRow+rowIndex-1, firstCol, lastCol));
-                    }
-
-                    // 合并当前节点单元格
-                    sheet.addMergedRegion(new CellRangeAddress(firstRow+rowIndex, lastRow+rowIndex, firstCol, lastCol));
-                }
-            }
-        }
-    }
-
-    private void writeRow(Sheet sheet, Object instance, CellStyle columnStyle) throws Exception {
-        Row row = sheet.createRow(rowNum++);
-        for (Integer index : fieldIndexes.keySet()) {
-            Field field = fieldIndexes.get(index);
-            if (null == field) {
-                continue;
-            }
-
-            Object value = field.get(instance);
-            if (value == null) {
-                continue;
-            }
-
-            Cell cell = row.createCell(index);
-            if (null != columnStyle) {
-                cell.setCellStyle(columnStyle);
-            }
-
-            String fieldValue = computeColumnContent(value, field);
-            cell.setCellValue(fieldValue);
-        }
-    }
-
-    String computeColumnContent(Object value, Field field) throws Exception {
-        if (field.getType().equals(String.class)) {
-            return value.toString();
-        }
-        ExcelColumn column = field.getAnnotation(ExcelColumn.class);
-        if (!NullConverter.class.equals(column.converter())) {
-            Converter convert = column.converter().newInstance();
-            ConverterCache.addConvert(convert);
-            return convert.toString(value);
-        } else {
-            if (StrKit.isNotEmpty(column.format())) {
-                String content = "";
-                if (Date.class.equals(field.getType())) {
-                    content = new DateConverter(column.format()).toString((Date) value);
-                } else if (LocalDate.class.equals(field.getType())) {
-                    content = new LocalDateConverter(column.format()).toString((LocalDate) value);
-                }
-                if (LocalDateTime.class.equals(field.getType())) {
-                    content = new LocalDateTimeConverter(column.format()).toString((LocalDateTime) value);
-                }
-                return content;
-            } else {
-                Converter converter = ConverterCache.computeConvert(field);
-                if (null != converter) {
-                    return converter.toString(value);
-                } else {
-                    return value.toString();
-                }
-            }
-        }
-    }
 
     @Data
     private class Node {
@@ -369,6 +236,7 @@ public abstract class ExcelWriter {
         private Integer width; //这个单元格应该在Excel中占有的宽度
         private Integer deep; // 单元格深度
         private Map<String, Node> map; // 子节点 map 集合
+        private ExcelColumn column; // excel注解
 
         public Node(String text, Integer width, Integer deep) {
             this.text = text;
@@ -392,40 +260,42 @@ public abstract class ExcelWriter {
             this.map = new LinkedHashMap<>();
         }
 
-         // 添加节点
-       void add(String[] text, Integer width) {
+        // 添加节点
+        void add(String[] text, Integer width) {
 
-           Map<String, Node> rootMap = map;
+            Map<String, Node> rootMap = map;
 
-           Node node =  null;
+            Node node =  null;
             //读到叶子结点的前一个结点处
-           for (int i = 0; i < text.length-1; i++) {
-               //逐层目录读取，如果没有get到，就创建一个新的目录
-               node = rootMap.get(text[i]);
-               if (node == null) {
-                   node = new Node(text[i]);
-                   rootMap.put(text[i], node);
-               }
-               //新目录的大小要同步上
-               if(node.getWidth() == null) node.setWidth(Constant.DEFAULT_COLUMN_WIDTH);
-               node.setWidth(node.getWidth() + width);
+            for (int i = 0; i < text.length-1; i++) {
+                //逐层目录读取，如果没有get到，就创建一个新的目录
+                node = rootMap.get(text[i]);
+                if (node == null) {
+                    node = new Node(text[i]);
+                    rootMap.put(text[i], node);
+                }
+                //新目录的大小要同步上
+                if(node.getWidth() == null) node.setWidth(Constant.DEFAULT_COLUMN_WIDTH);
+                node.setWidth(node.getWidth() + width);
 
-               // 设置深度
-               if(node.getDeep() == null) node.setDeep(i);
+                // 设置深度
+                if(node.getDeep() == null) node.setDeep(i);
 
-               rootMap = node.getMap();
-           }
-           //此时的rootMap就是叶子结点所在的目录
-           rootMap.put(text[text.length - 1], new Node(text[text.length - 1], width, text.length - 1));
+                rootMap = node.getMap();
+            }
+            //此时的rootMap就是叶子结点所在的目录
+            rootMap.put(text[text.length - 1], new Node(text[text.length - 1], width, text.length - 1));
 
-           //还要给这个文件的父文件夹设置deep
-           if (node != null) {
-               node.setDeep(text.length - 2);
-           }
+            //还要给这个文件的父文件夹设置deep
+            if (node != null) {
+                node.setDeep(text.length - 2);
+            }
         }
 
+
+
         // 得到节点集合
-        List<Node> parse() {
+        List<Node> parse(List<ExcelColumn> columns) {
             List<Node> list = new ArrayList<>();
             for (Map.Entry<String, Node> entry : map.entrySet()) {
                 //先把自己保存进去
@@ -433,7 +303,7 @@ public abstract class ExcelWriter {
                 //如果该节点的map不是空集合，证明这是一个“文件夹”（根节点）
                 //需要把自己add进去的同时，把它的孩子也全部add进去
                 if (entry.getValue().getMap() != null && entry.getValue().getMap().size() > 0) {
-                    list.addAll(entry.getValue().parse());
+                    list.addAll(entry.getValue().parse(columns));
                 }
             }
             return list;
@@ -470,8 +340,225 @@ public abstract class ExcelWriter {
                 add(column.title(), column.width()>0? column.width(): Constant.DEFAULT_COLUMN_WIDTH);
             }
 
-            return parse();
+            return parse(columns);
 
+        }
+    }
+    private void writeColHeader(Sheet sheet, Table table, int rowIndex, CellStyle headerStyle) throws Exception {
+
+        Drawing draw = sheet.createDrawingPatriarch();
+
+        if(table.headLineRow() == 1) {
+            writeSingleHeader(sheet, draw, rowIndex, headerStyle);
+        } else {
+            writeMultiHeader(sheet, draw, rowIndex, headerStyle);
+        }
+    }
+
+    private void writeSingleHeader(Sheet sheet, Drawing draw, int rowIndex, CellStyle headerStyle) {
+        Row rowHead = sheet.createRow(rowIndex);
+        for (ExcelColumn column : columns) {
+            Cell cell = rowHead.createCell(column.index());
+            if (null != headerStyle) {
+                cell.setCellStyle(headerStyle);
+            }
+            cell.setCellValue(column.title()[0]);
+            if (column.width() > 0) {
+                sheet.setColumnWidth(column.index(), column.width());
+            } else {
+                sheet.setColumnWidth(column.index(), Constant.DEFAULT_COLUMN_WIDTH);
+            }
+
+            writeColComment(cell, draw, column, rowIndex, rowIndex, column.index(), column.index());
+        }
+    }
+
+    private void writeMultiHeader(Sheet sheet, Drawing draw, int rowIndex, CellStyle headerStyle) {
+        // 迭代Map集合，并重构一套“根目录”
+        Node root = new Node();
+        List<Node> nodes = root.build(columns);
+
+        int rootDeepLength = root.getDeepLength();
+
+        // 创建多个行，并用数组存储
+        Row[] rows = new Row[rootDeepLength];
+        for (int i = 0; i < rows.length; i++) {
+            rows[i] = sheet.createRow(rowIndex + i);
+        }
+
+        int columnIndex = 0;
+        int colIndex = 0;
+        int firstRow = 0;
+        int lastRow = 0;
+        int firstCol = 0;
+        int lastCol = 0;
+        for (Node node : nodes) {
+
+            if (node.map.size() == 0) {
+                node.column = columns.get(columnIndex++);
+            }
+
+            firstRow = 0;
+            lastRow = 0;
+            firstCol = colIndex;
+            lastCol = colIndex;
+
+            //获取该节点的深度
+            int deep = node.getDeep();
+            System.out.println(deep);
+            //从下往上取行，向右创建
+
+            for (int i = 0; i <= deep; i++) {
+
+                if(rows[i].getCell(colIndex) == null) {
+                    rows[i].createCell(colIndex);
+
+                    if(firstRow == 0) firstRow = i;
+                    lastRow = i;
+                }
+            }
+            Cell cell = rows[deep].getCell(colIndex);
+            cell.setCellValue(node.getText());
+
+            if(node.map.size() > 0) {
+                colIndex += node.map.size() - 1;
+                lastCol = colIndex;
+
+            } else {
+                colIndex++;
+
+                if(node.deep> 0 && node.getChildrenCount() == 1) {
+                    lastRow = rootDeepLength - node.getDeep();
+
+                } else {
+                    lastRow = rootDeepLength - node.getDeep() - node.getChildrenCount();
+                }
+            }
+
+            if(node.deep >= 0 && node.map.size() > 1) {
+                colIndex--;
+            }
+
+            if(lastRow > firstRow || lastCol > firstCol) {
+
+                // 合并父节点单元格
+                if(lastCol > firstCol && firstRow > 0) {
+                    sheet.addMergedRegion(new CellRangeAddress(firstRow+rowIndex-1, firstRow+rowIndex-1, firstCol, lastCol));
+                }
+
+                // 合并当前节点单元格
+                sheet.addMergedRegion(new CellRangeAddress(firstRow+rowIndex, lastRow+rowIndex, firstCol, lastCol));
+            }
+
+            if(node.map.size() == 0 && node.getColumn()!=null) {
+                writeColComment(cell, draw,  node.getColumn(),firstRow+rowIndex, lastRow+rowIndex, firstCol, lastCol);
+            }
+
+        }
+    }
+
+    private void writeColOptions(Sheet sheet, ExcelColumn column,
+                                 int firstRow, int lastRow, int firstCell, int lastCell) throws Exception {
+
+        Options options = column.options().newInstance();
+        if (null != column.options()) {
+            String[] datasource =  options.get();
+            if (null != datasource && datasource.length > 0) {
+                if (datasource.length > 100) {
+                    throw new WriterException("Options item too much.");
+                }
+
+                DataValidationHelper validationHelper = sheet.getDataValidationHelper();
+                DataValidationConstraint explicitListConstraint = validationHelper
+                        .createExplicitListConstraint(datasource);
+                CellRangeAddressList regions = new CellRangeAddressList(firstRow, lastRow, firstCell,
+                        lastCell);
+                DataValidation validation = validationHelper
+                        .createValidation(explicitListConstraint, regions);
+                validation.setSuppressDropDownArrow(true);
+                validation.createErrorBox("提示", "请从下拉列表选取");
+                validation.setShowErrorBox(true);
+                sheet.addValidationData(validation);
+            }
+        }
+    }
+
+    private void writeColComment(Cell cell, Drawing draw, ExcelColumn column,
+                                 int firstRow, int lastRow, int firstCell, int lastCell) {
+
+        if(StrKit.isNotEmpty(column.comment()) && cell!=null) {
+
+            Comment cellComment = draw.createCellComment(//
+                    new XSSFClientAnchor(0, 0, 0, 0, firstCell, firstRow, lastCell, lastRow));
+            XSSFRichTextString xssfRichTextString = new XSSFRichTextString(
+                    column.comment());
+            Font commentFormatter = workbook.createFont();
+            xssfRichTextString.applyFont(commentFormatter);
+            cellComment.setString(xssfRichTextString);
+            cell.setCellComment(cellComment);
+        }
+
+    }
+
+    private void writeRow(Sheet sheet, Object instance, CellStyle columnStyle) throws Exception {
+        Row row = sheet.createRow(rowNum++);
+        for (Integer index : fieldIndexes.keySet()) {
+
+            Field field = fieldIndexes.get(index);
+            if (null == field) {
+                continue;
+            }
+
+            Object value = field.get(instance);
+            if (value == null) {
+                continue;
+            }
+
+            Cell cell = row.createCell(index);
+            if (null != columnStyle) {
+                cell.setCellStyle(columnStyle);
+            }
+
+            String fieldValue = computeColumnContent(value, field);
+            cell.setCellValue(fieldValue);
+
+            if(columns.size()-1 > index) {
+                ExcelColumn column = columns.get(index);
+                writeColOptions(sheet, column, rowNum-1, rowNum-1, index, index);
+            }
+
+        }
+    }
+
+    String computeColumnContent(Object value, Field field) throws Exception {
+        if (field.getType().equals(String.class)) {
+            return value.toString();
+        }
+        ExcelColumn column = field.getAnnotation(ExcelColumn.class);
+        if (!NullConverter.class.equals(column.converter())) {
+            Converter convert = column.converter().newInstance();
+            ConverterCache.addConvert(convert);
+            return convert.toString(value);
+        } else {
+            if (StrKit.isNotEmpty(column.dateFormat())) {
+                String content = "";
+                if (Date.class.equals(field.getType())) {
+                    content = new DateConverter(column.dateFormat()).toString((Date) value);
+                } else if (LocalDate.class.equals(field.getType())) {
+                    content = new LocalDateConverter(column.dateFormat()).toString((LocalDate) value);
+                }
+                if (LocalDateTime.class.equals(field.getType())) {
+                    content = new LocalDateTimeConverter(column.dateFormat()).toString((LocalDateTime) value);
+                }
+                return content;
+            } else {
+                Converter converter = ConverterCache.computeConvert(field);
+                if (null != converter) {
+                    return converter.toString(value);
+                } else {
+                    return value.toString();
+                }
+            }
         }
     }
 

@@ -3,6 +3,7 @@ package cn.jianchengwang.tl.poi.excel;
 import cn.jianchengwang.tl.poi.excel.config.Table;
 import cn.jianchengwang.tl.poi.excel.enums.ExcelType;
 import cn.jianchengwang.tl.poi.excel.exception.WriterException;
+import cn.jianchengwang.tl.poi.excel.kit.ExcelKit;
 import cn.jianchengwang.tl.poi.excel.kit.StrKit;
 import cn.jianchengwang.tl.poi.excel.config.style.StyleConfig;
 import cn.jianchengwang.tl.poi.excel.writer.WriterWith2003;
@@ -213,6 +214,7 @@ public class Writer {
 //        if (!withRaw && (null == rows || rows.isEmpty())) {
 //            throw new WriterException("write rows cannot be empty, please check it");
 //        }
+
         if (excelType == ExcelType.XLSX) {
             new WriterWith2007(outputStream).writeSheet(this);
         }
@@ -286,6 +288,10 @@ public class Writer {
 
     public StyleConfig styleConfig() {
         return this.styleConfig;
+    }
+
+    public ExcelType excelType() {
+        return excelType;
     }
 
 }
