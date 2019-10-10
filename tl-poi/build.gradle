@@ -6,10 +6,8 @@ dependencies {
     // https://mvnrepository.com/artifact/javax.servlet/javax.servlet-api
     implementation group: 'javax.servlet', name: 'javax.servlet-api', version: '4.0.1'
 
-//    // https://mvnrepository.com/artifact/org.slf4j/slf4j-api
-    implementation group: 'org.slf4j', name: 'slf4j-api', version: '1.7.26'
-//
-//    // https://mvnrepository.com/artifact/org.apache.poi/poi
+
+    // https://mvnrepository.com/artifact/org.apache.poi/poi
     implementation group: 'org.apache.poi', name: 'poi', version: poiVersion
     implementation group: 'org.apache.poi', name: 'poi-ooxml', version: poiVersion
 

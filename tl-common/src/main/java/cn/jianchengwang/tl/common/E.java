@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
  * Exception Tool
  * Created by wjc on 2019/8/26
  **/
+@Slf4j
 @UtilityClass
 public class E {
 

@@ -9,6 +9,7 @@ import java.text.MessageFormat;
  * String Tool
  * Created by wjc on 2019/8/26
  **/
+@Slf4j
 @UtilityClass
 public class S {
 

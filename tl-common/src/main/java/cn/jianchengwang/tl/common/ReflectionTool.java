@@ -10,6 +10,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
 
+import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -20,6 +21,8 @@ import lombok.extern.slf4j.Slf4j;
  * @author Caratacus
  * @since 2016-09-22
  */
+@Slf4j
+@UtilityClass
 public class ReflectionTool {
 
     private static final Map<Class<?>, List<Field>> CLASS_FIELD_CACHE = new ConcurrentHashMap<>();

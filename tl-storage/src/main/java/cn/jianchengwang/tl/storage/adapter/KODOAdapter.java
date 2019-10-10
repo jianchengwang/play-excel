@@ -104,8 +104,8 @@ public class KODOAdapter implements StorageAdapter {
     public void doBatchRemove(List<String> fullPathList) {
         try {
             encodeFullPath(fullPathList);
-            BucketManager.Batch batchOperations = new BucketManager.Batch();
-            batchOperations.delete(bucket, fullPathList.toArray(new String[0]));
+            BucketManager.BatchOperations batchOperations = new BucketManager.BatchOperations();
+            batchOperations.addDeleteOp(bucket, fullPathList.toArray(new String[0]));
             bucketManager.batch(batchOperations);
         } catch (QiniuException e) {
             throw E.unexpected(e);

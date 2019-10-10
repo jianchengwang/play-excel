@@ -12,6 +12,7 @@ import java.util.stream.Collectors;
 /**
  * Created by wjc on 2019/8/15
  **/
+@Slf4j
 @UtilityClass
 public class EnumTool {
 
