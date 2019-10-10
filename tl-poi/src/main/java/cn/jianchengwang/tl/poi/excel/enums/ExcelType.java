@@ -1,10 +1,14 @@
 package cn.jianchengwang.tl.poi.excel.enums;
 
+import cn.jianchengwang.tl.common.E;
 import org.apache.poi.poifs.filesystem.FileMagic;
 
 import java.io.IOException;
 import java.io.InputStream;
 
+/**
+ * Created by wjc on 2019/9/5
+ **/
 public enum ExcelType {
 
     XLSX(".xlsx"),
@@ -39,7 +43,7 @@ public enum ExcelType {
             }
             return null;
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw E.unexpected(e);
         }
     }
 }

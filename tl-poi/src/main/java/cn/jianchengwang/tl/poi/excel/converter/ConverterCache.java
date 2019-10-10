@@ -29,6 +29,7 @@ public class ConverterCache {
         CONVERTER_MAP.put(FloatConverter.class, new FloatConverter());
         CONVERTER_MAP.put(DecimalConverter.class, new DecimalConverter());
         CONVERTER_MAP.put(BigIntConverter.class, new BigIntConverter());
+        CONVERTER_MAP.put(EnumConverter.class, new EnumConverter());
     }
 
     public static void addConvert(Converter converter) {
@@ -84,6 +85,8 @@ public class ConverterCache {
         } else if (fieldType.equals(LocalDateTime.class)) {
             String pattern = field.getAnnotation(ExcelColumn.class).dateFormat();
             return new LocalDateTimeConverter(pattern);
+        } else if(fieldType.isEnum()) {
+            return ConverterCache.getConvert(EnumConverter.class);
         }
         return null;
     }

@@ -1,15 +1,21 @@
 package cn.jianchengwang.tl.poi.excel.kit;
 
+import cn.jianchengwang.tl.common.FileTool;
 import cn.jianchengwang.tl.poi.excel.enums.ExcelType;
 import cn.jianchengwang.tl.poi.excel.exception.ReaderException;
+import lombok.experimental.UtilityClass;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
-
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 
+/**
+ * Created by wjc on 2019/9/5
+ **/
+@Slf4j
+@UtilityClass
 public class ExcelKit {
 
     public static <T> T newInstance(Class<T> type) {
@@ -72,17 +78,7 @@ public class ExcelKit {
         if (null == inputStream) {
             return null;
         }
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        // Fake code simulating the copy
-        // You can generally do better with nio if you need...
-        // And please, unlike me, do something about the Exceptions :D
-        byte[] buffer = new byte[1024];
-        int    len;
-        while ((len = inputStream.read(buffer)) > -1) {
-            baos.write(buffer, 0, len);
-        }
-        baos.flush();
-        return baos.toByteArray();
+        return FileTool.toByteArray(inputStream);
     }
 
     public static boolean isXLSX(InputStream inputStream) {

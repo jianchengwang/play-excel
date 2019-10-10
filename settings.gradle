@@ -1,5 +1,7 @@
 rootProject.name = 'tl-lib'
+include 'tl-common'
 include 'tl-poi'
 include 'tl-mp'
 include 'tl-jdbc'
+include 'tl-storage'
 

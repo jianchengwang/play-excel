@@ -15,7 +15,7 @@
  */
 package cn.jianchengwang.tl.poi.excel.converter;
 
-import cn.jianchengwang.tl.poi.excel.exception.ConverterException;
+import cn.jianchengwang.tl.common.E;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
@@ -32,7 +32,7 @@ public class LocalDateConverter implements Converter<String, LocalDate> {
     }
 
     @Override
-    public LocalDate stringToR(String value) throws ConverterException {
+    public LocalDate stringToR(String value, Class clazz) {
         try {
             if(null == value){
                 return null;
@@ -43,10 +43,10 @@ public class LocalDateConverter implements Converter<String, LocalDate> {
                 YearMonth ym = YearMonth.parse(value, formatter);
                 return ym.atDay(1);
             } catch (Exception e2) {
-                throw new ConverterException("convert [" + value + "] to LocalDate error", e2);
+                throw E.converterException("convert [" + value + "] to LocalDate error", e2);
             }
         } catch (Exception e) {
-            throw new ConverterException("convert [" + value + "] to LocalDate error", e);
+            throw E.converterException("convert [" + value + "] to LocalDate error", e);
         }
     }
 

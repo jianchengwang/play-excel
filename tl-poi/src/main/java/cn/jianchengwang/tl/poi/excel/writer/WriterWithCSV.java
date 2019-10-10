@@ -1,9 +1,10 @@
-
 package cn.jianchengwang.tl.poi.excel.writer;
 
+import cn.jianchengwang.tl.common.E;
+import cn.jianchengwang.tl.poi.excel.Const;
 import cn.jianchengwang.tl.poi.excel.Writer;
 import cn.jianchengwang.tl.poi.excel.annotation.ExcelColumn;
-import cn.jianchengwang.tl.poi.excel.exception.WriterException;
+import cn.jianchengwang.tl.poi.excel.config.GridSheet;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -14,34 +15,33 @@ import java.util.*;
 import static java.util.stream.Collectors.toList;
 
 /**
- * CSV Writer
- *
- */
-public class WriterWithCSV extends ExcelWriter {
-
-    private OutputStream   outputStream;
+ * Created by wjc on 2019/9/5
+ **/
+public class WriterWithCSV {
+    private OutputStream outputStream;
     private List<String[]> csvLines;
 
     public WriterWithCSV(OutputStream outputStream) {
         this.outputStream = outputStream;
     }
 
-    @Override
-    public void writeSheet(Writer writer) throws WriterException {
-        Collection<?> rows = writer.rows();
-        this.parseCSVLines(rows);
+    public void writeSheet(Writer writer) {
 
         try (OutputStreamWriter osWriter =
-                     new OutputStreamWriter(outputStream, writer.charset())) {
+                     new OutputStreamWriter(outputStream, Const.charset)) {
 
+            for(GridSheet sheet: writer.getGridSheetList()) {
+                Collection<?> rows = sheet.getData();
+                this.parseCSVLines(rows);
 
-            osWriter.write('\ufeff');
+                osWriter.write('\ufeff');
 
-            for (String[] csvLine : csvLines) {
-                writeLine(osWriter, csvLine);
+                for (String[] csvLine : csvLines) {
+                    writeLine(osWriter, csvLine);
+                }
             }
         } catch (Exception e) {
-            throw new WriterException(e);
+            throw E.unexpected(e);
         }
     }
 
@@ -94,11 +94,9 @@ public class WriterWithCSV extends ExcelWriter {
             if (null == value) {
                 row[i] = "";
             } else {
-                row[i] = this.computeColumnContent(value, sortedFields.get(i));
+                row[i] = value.toString();
             }
         }
         return row;
     }
-
-
 }

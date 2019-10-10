@@ -1,12 +1,10 @@
 package cn.jianchengwang.tl.poi.excel.converter;
 
-import cn.jianchengwang.tl.poi.excel.exception.ConverterException;
-
 public interface Converter<String, R> {
 
-    R stringToR(String value) throws ConverterException;
+    R stringToR(String value, Class clazz);
 
-    default java.lang.String toString(R fieldValue) throws ConverterException {
+    default java.lang.String toString(R fieldValue) {
         if (null == fieldValue) {
             return null;
         }

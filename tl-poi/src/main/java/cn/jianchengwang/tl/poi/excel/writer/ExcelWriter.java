@@ -1,35 +1,31 @@
 package cn.jianchengwang.tl.poi.excel.writer;
 
-import cn.jianchengwang.tl.poi.excel.Constant;
+import cn.jianchengwang.tl.common.EnumTool;
+import cn.jianchengwang.tl.common.S;
+import cn.jianchengwang.tl.poi.excel.Const;
 import cn.jianchengwang.tl.poi.excel.Writer;
 import cn.jianchengwang.tl.poi.excel.annotation.ExcelColumn;
-import cn.jianchengwang.tl.poi.excel.config.Table;
-import cn.jianchengwang.tl.poi.excel.config.extmsg.ExtMsg;
-import cn.jianchengwang.tl.poi.excel.config.options.Options;
-import cn.jianchengwang.tl.poi.excel.enums.ExcelType;
-import cn.jianchengwang.tl.poi.excel.exception.WriterException;
-import cn.jianchengwang.tl.poi.excel.kit.StrKit;
+import cn.jianchengwang.tl.poi.excel.config.GridSheet;
+import cn.jianchengwang.tl.poi.excel.config.extrainfo.ExtraInfo;
+import cn.jianchengwang.tl.poi.excel.config.extrainfo.Info;
+import cn.jianchengwang.tl.poi.excel.config.option.Options;
 import cn.jianchengwang.tl.poi.excel.config.style.StyleConfig;
 import cn.jianchengwang.tl.poi.excel.converter.*;
+import cn.jianchengwang.tl.poi.excel.enums.ExcelType;
+import cn.jianchengwang.tl.poi.excel.exception.WriterException;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.poi.hssf.usermodel.HSSFClientAnchor;
-import org.apache.poi.hssf.usermodel.HSSFRichTextString;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.ss.util.CellRangeAddressList;
-import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 import org.apache.poi.xssf.usermodel.XSSFClientAnchor;
 import org.apache.poi.xssf.usermodel.XSSFRichTextString;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import java.io.OutputStream;
 import java.lang.reflect.Field;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
-
-import static java.util.Comparator.comparingInt;
 
 @Slf4j
 public abstract class ExcelWriter {
@@ -41,6 +37,9 @@ public abstract class ExcelWriter {
     Workbook workbook;
     OutputStream outputStream;
 
+    private CreationHelper factory;
+    private ExcelType excelType;
+
     ExcelWriter(OutputStream outputStream) {
         this.outputStream = outputStream;
     }
@@ -50,21 +49,12 @@ public abstract class ExcelWriter {
 
     void writeSheet(Writer writer) throws WriterException {
 
-        Collection<Table<?>> tables = writer.tables();
-        if(!writer.haveMultipleSheet()) {
-            tables = new ArrayList<>();
-            tables.add(
-                    Table.create(Object.class, 0, writer.sheetName())
-                            .startRow(writer.startRow())
-                            .headLineRow(writer.startRow())
-                            .headTitle(writer.headerTitle())
-                            .data(writer.rows())
-                            .styleConfig(writer.styleConfig())
-            );
-        }
+        factory = workbook.getCreationHelper();
+        excelType = writer.getExcelType();
 
-        for(Table table : tables) {
-            writeSheet0(writer, table);
+        Collection<GridSheet> gridSheetList = writer.getGridSheetList();
+        for(GridSheet gridSheet : gridSheetList) {
+            writeSheet0(writer, gridSheet);
         }
 
         // write to OutputStream
@@ -89,17 +79,20 @@ public abstract class ExcelWriter {
      * @param writer writer
      * @throws WriterException
      */
-    void writeSheet0(Writer writer, Table table) throws WriterException {
+    void writeSheet0(Writer writer, GridSheet gridSheet) throws WriterException {
 
         // create sheet
-        Sheet sheet = workbook.createSheet(table.sheetName());
+        Sheet sheet = workbook.createSheet(gridSheet.sheetName());
+
+        // create draw
+        Drawing draw = sheet.createDrawingPatriarch();
 
         // setting styles
-        CellStyle headerStyle = Constant.defaultHeaderStyle(workbook);
-        CellStyle columnStyle = Constant.defaultColumnStyle(workbook);
-        CellStyle titleStyle  = Constant.defaultTitleStyle(workbook);
+        CellStyle headerStyle = Const.DEFAULT_STYLE.defaultHeaderStyle(workbook);
+        CellStyle columnStyle = Const.DEFAULT_STYLE.defaultColumnStyle(workbook);
+        CellStyle titleStyle  = Const.DEFAULT_STYLE.defaultTitleStyle(workbook);
 
-        StyleConfig styleConfig = table.styleConfig();
+        StyleConfig styleConfig = gridSheet.styleConfig();
         if(styleConfig != null) {
             if (null != styleConfig.titleStyle()) {
                 titleStyle = styleConfig.titleStyle().accept(workbook, titleStyle);
@@ -113,11 +106,11 @@ public abstract class ExcelWriter {
 
         }
 
-        if (writer.isRaw()) {
+        if (writer.withRaw()) {
             writer.sheetConsumer().accept(sheet);
         } else {
             // compute the Filed to be written
-            Collection<?> rows   = table.data();
+            Collection<?> rows   = gridSheet.data();
             Field[]       fields = rows.iterator().next().getClass().getDeclaredFields();
 
             this.fieldIndexes = new HashMap<>(fields.length);
@@ -133,34 +126,22 @@ public abstract class ExcelWriter {
             }
 
             int colRowIndex = 0;
-            // write title
-            String title = table.headTitle();
-            if (table.haveHeadTitle()) {
-                Integer maxColIndex = columns.stream()
-                        .map(ExcelColumn::index)
-                        .max(comparingInt(Integer::intValue))
-                        .get();
 
-                this.writeHeader(titleStyle, sheet, title, maxColIndex);
+            // write extraInfo
+            if(gridSheet.extraInfo()!=null && gridSheet.extraInfo().haveExtraInfo()) {
+                this.writeExtraInfo(sheet, draw, gridSheet, headerStyle, columnStyle);
 
-                colRowIndex = 1;
+                colRowIndex += (gridSheet.extraInfo().row() + 1);
             }
 
-            // write extMsg
-            if(table.extMsgConfig().haveExtMsg()) {
-                this.writeExtMsgList(sheet, table);
-
-                colRowIndex += (table.extMsgConfig().extMsgRow() + 1);
-            }
-
-            this.rowNum = table.startRow();
+            this.rowNum = gridSheet.startRow();
             if (this.rowNum == 0) {
-                this.rowNum = colRowIndex + table.headLineRow();
+                this.rowNum = colRowIndex + gridSheet.headLineRow();
             }
 
             try {
                 // write column header
-                this.writeColHeader(sheet, table, colRowIndex, headerStyle);
+                this.writeColHeader(sheet, draw, gridSheet, colRowIndex, headerStyle);
 
                 // write rows
                 for (Object row : rows) {
@@ -189,37 +170,42 @@ public abstract class ExcelWriter {
         sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, maxColIndex));
     }
 
-    private void writeExtMsgList(Sheet sheet, Table table) {
+    private void writeExtraInfo(Sheet sheet, Drawing draw, GridSheet gridSheet, CellStyle kStyle, CellStyle vStyle) {
 
-        int startRow = 0;
-        if(table.haveHeadTitle()) startRow = 1;
+        int startRow = gridSheet.startRow();
+        ExtraInfo extraInfo = gridSheet.extraInfo();
 
-        int t = table.extMsgConfig().extMsgTotal();
-        int r = table.extMsgConfig().extMsgRow();
-        int c = table.extMsgConfig().extMsgCol();
-        int s = table.extMsgConfig().extMsgColSpan();
-        List<ExtMsg> extMsgList = table.extMsgList();
+        int t = extraInfo.total();
+        int r = extraInfo.row();
+        int c = extraInfo.col();
+        int s = extraInfo.colSpan();
+        List<Info> infoList = extraInfo.infoList();
 
-        int extMsgListIndex = 0;
-        for(int ri=0; ri<table.extMsgConfig().extMsgRow(); ri++) {
+        int index = 0;
+        for(int ri=0; ri<r; ri++) {
 
-            Row row = sheet.createRow(ri + startRow);
+            int rowIndex = ri + startRow;
+            Row row = sheet.createRow(rowIndex);
 
             for(int ci=0; ci<(2 + s)*c-1; ci++) {
 
-                if(extMsgListIndex == extMsgList.size()) return;
+                if(index == infoList.size()) return;
 
-                ExtMsg extMsg = extMsgList.get(extMsgListIndex);
+                Info info = infoList.get(index);
 
                 if(ci % (2 + s) == 0) {
                     Cell cell = row.createCell(ci);
-                    cell.setCellValue(extMsg.getTitle());
+                    cell.setCellStyle(kStyle);
+                    cell.setCellValue(info.getK());
+
+                    writeColComment(cell, draw, info.getComment(), rowIndex, rowIndex, ci, ci);
                 } else if(ci % (2 + s) == 1){
                     Cell cell = row.createCell(ci);
-                    cell.setCellValue(extMsg.getMsg());
+                    cell.setCellStyle(vStyle);
+                    cell.setCellValue(info.getV());
 
                     ci += s;
-                    extMsgListIndex++;
+                    index++;
                 }
             }
 
@@ -275,7 +261,7 @@ public abstract class ExcelWriter {
                     rootMap.put(text[i], node);
                 }
                 //新目录的大小要同步上
-                if(node.getWidth() == null) node.setWidth(Constant.DEFAULT_COLUMN_WIDTH);
+                if(node.getWidth() == null) node.setWidth(Const.DEFAULT_COLUMN_WIDTH);
                 node.setWidth(node.getWidth() + width);
 
                 // 设置深度
@@ -337,16 +323,14 @@ public abstract class ExcelWriter {
         List<Node> build(List<ExcelColumn> columns) {
 
             for(ExcelColumn column: columns) {
-                add(column.title(), column.width()>0? column.width(): Constant.DEFAULT_COLUMN_WIDTH);
+                add(new String[] {column.header()}, column.width()>0? column.width(): Const.DEFAULT_COLUMN_WIDTH);
             }
 
             return parse(columns);
 
         }
     }
-    private void writeColHeader(Sheet sheet, Table table, int rowIndex, CellStyle headerStyle) throws Exception {
-
-        Drawing draw = sheet.createDrawingPatriarch();
+    private void writeColHeader(Sheet sheet, Drawing draw, GridSheet table, int rowIndex, CellStyle headerStyle) throws Exception {
 
         if(table.headLineRow() == 1) {
             writeSingleHeader(sheet, draw, rowIndex, headerStyle);
@@ -362,14 +346,14 @@ public abstract class ExcelWriter {
             if (null != headerStyle) {
                 cell.setCellStyle(headerStyle);
             }
-            cell.setCellValue(column.title()[0]);
+            cell.setCellValue(column.header());
             if (column.width() > 0) {
                 sheet.setColumnWidth(column.index(), column.width());
             } else {
-                sheet.setColumnWidth(column.index(), Constant.DEFAULT_COLUMN_WIDTH);
+                sheet.setColumnWidth(column.index(), Const.DEFAULT_COLUMN_WIDTH);
             }
 
-            writeColComment(cell, draw, column, rowIndex, rowIndex, column.index(), column.index());
+            writeColComment(cell, draw, column.comment(), rowIndex, rowIndex, column.index(), column.index());
         }
     }
 
@@ -451,7 +435,7 @@ public abstract class ExcelWriter {
             }
 
             if(node.map.size() == 0 && node.getColumn()!=null) {
-                writeColComment(cell, draw,  node.getColumn(),firstRow+rowIndex, lastRow+rowIndex, firstCol, lastCol);
+                writeColComment(cell, draw,  node.getColumn().comment(),firstRow+rowIndex, lastRow+rowIndex, firstCol, lastCol);
             }
 
         }
@@ -460,8 +444,14 @@ public abstract class ExcelWriter {
     private void writeColOptions(Sheet sheet, ExcelColumn column,
                                  int firstRow, int lastRow, int firstCell, int lastCell) throws Exception {
 
-        Options options = column.options().newInstance();
         if (null != column.options()) {
+            Options options;
+            Class clazz = column.options();
+            if(clazz.isEnum()) {
+                options = EnumTool.getFirstValue(clazz); // 枚举不能new产生，所以这里折中通过遍历获取第一个枚举对象
+            } else {
+                options = column.options().newInstance();
+            }
             String[] datasource =  options.get();
             if (null != datasource && datasource.length > 0) {
                 if (datasource.length > 100) {
@@ -483,19 +473,28 @@ public abstract class ExcelWriter {
         }
     }
 
-    private void writeColComment(Cell cell, Drawing draw, ExcelColumn column,
+    private void writeColComment(Cell cell, Drawing draw, String comment,
                                  int firstRow, int lastRow, int firstCell, int lastCell) {
 
-        if(StrKit.isNotEmpty(column.comment()) && cell!=null) {
+        if(S.isNotEmpty(comment) && cell!=null) {
 
-            Comment cellComment = draw.createCellComment(//
-                    new XSSFClientAnchor(0, 0, 0, 0, firstCell, firstRow, lastCell, lastRow));
-            XSSFRichTextString xssfRichTextString = new XSSFRichTextString(
-                    column.comment());
-            Font commentFormatter = workbook.createFont();
-            xssfRichTextString.applyFont(commentFormatter);
-            cellComment.setString(xssfRichTextString);
-            cell.setCellComment(cellComment);
+            if(excelType == ExcelType.XLSX) {
+                Comment cellComment = draw.createCellComment(//
+                        new XSSFClientAnchor(0, 0, 0, 0, firstCell, firstRow, lastCell, lastRow));
+                XSSFRichTextString xssfRichTextString = new XSSFRichTextString(
+                        comment);
+                Font commentFormatter = workbook.createFont();
+                xssfRichTextString.applyFont(commentFormatter);
+                cellComment.setString(xssfRichTextString);
+                cell.setCellComment(cellComment);
+            } else {
+                ClientAnchor anchor = factory.createClientAnchor();
+                Comment comment0 = draw.createCellComment(anchor);
+                RichTextString str0 = factory.createRichTextString(comment);
+                comment0.setString(str0);
+                cell.setCellComment(comment0);
+            }
+
         }
 
     }
@@ -522,7 +521,7 @@ public abstract class ExcelWriter {
             String fieldValue = computeColumnContent(value, field);
             cell.setCellValue(fieldValue);
 
-            if(columns.size()-1 > index) {
+            if(columns.size() > index) {
                 ExcelColumn column = columns.get(index);
                 writeColOptions(sheet, column, rowNum-1, rowNum-1, index, index);
             }
@@ -540,7 +539,7 @@ public abstract class ExcelWriter {
             ConverterCache.addConvert(convert);
             return convert.toString(value);
         } else {
-            if (StrKit.isNotEmpty(column.dateFormat())) {
+            if (S.isNotEmpty(column.dateFormat())) {
                 String content = "";
                 if (Date.class.equals(field.getType())) {
                     content = new DateConverter(column.dateFormat()).toString((Date) value);

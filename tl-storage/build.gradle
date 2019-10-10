@@ -1,0 +1,14 @@
+dependencies {
+    implementation project(':tl-common')
+
+    implementation group: 'org.springframework.boot', name: 'spring-boot-autoconfigure', version: '2.1.9.RELEASE'
+
+    // cloud storage
+    implementation group: 'com.aliyun.oss', name: 'aliyun-sdk-oss', version: '3.6.0'
+    implementation group: 'com.qiniu', name: 'qiniu-java-sdk', version: '7.2.25'
+    implementation group: 'com.amazonaws', name: 'aws-java-sdk-s3', version: '1.11.648'
+    implementation group: 'com.amazonaws', name: 'aws-java-sdk-dynamodb', version: '1.11.648'
+    implementation group: 'com.microsoft.azure', name: 'azure-storage', version: '8.4.0'
+
+    testCompile group: 'org.springframework.boot', name: 'spring-boot-starter-test', version: '2.1.9.RELEASE'
+}

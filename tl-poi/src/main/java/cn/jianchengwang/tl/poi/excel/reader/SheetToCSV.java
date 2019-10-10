@@ -1,11 +1,14 @@
 package cn.jianchengwang.tl.poi.excel.reader;
 
+import cn.jianchengwang.tl.common.E;
 import cn.jianchengwang.tl.poi.excel.Reader;
+import cn.jianchengwang.tl.poi.excel.config.GridSheet;
+import cn.jianchengwang.tl.poi.excel.config.extrainfo.ExtraInfo;
+import cn.jianchengwang.tl.poi.excel.config.extrainfo.Info;
 import cn.jianchengwang.tl.poi.excel.converter.Converter;
+import cn.jianchengwang.tl.poi.excel.exception.ReaderException;
 import cn.jianchengwang.tl.poi.excel.kit.ExcelKit;
-import cn.jianchengwang.tl.poi.excel.config.Table;
-import cn.jianchengwang.tl.poi.excel.config.extmsg.ExtMsg;
-import cn.jianchengwang.tl.poi.excel.config.extmsg.ExtMsgConfig;
+import cn.jianchengwang.tl.poi.excel.validator.Validator;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.openxml4j.opc.OPCPackage;
 import org.apache.poi.ss.util.CellAddress;
@@ -14,6 +17,7 @@ import org.apache.poi.xssf.eventusermodel.XSSFSheetXMLHandler;
 import org.apache.poi.xssf.usermodel.XSSFComment;
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.stream.Stream;
 
 /**
@@ -22,40 +26,49 @@ import java.util.stream.Stream;
  * as a (basic) CSV.
  */
 @Slf4j
-public class SheetToCSV<T> extends ReaderConverter implements XSSFSheetXMLHandler.SheetContentsHandler {
+public class SheetToCSV<T> extends ReaderConverterAndValidator implements XSSFSheetXMLHandler.SheetContentsHandler {
 
     private boolean firstCellOfRow;
     private int     currentRow = -1;
     private int     currentCol = -1;
 
     private final OPCPackage opcPackage;
-    private final Class<T>          type;
+    private final Class<T>          clazz;
     private final int               startRow;
 
-    private final Table<T> tableConfig;
-    private final ExtMsgConfig extMsgConfig;
-    private volatile int extMsgListIndex = 0;
+    private final GridSheet<T> gridSheetConfig;
+    private final ExtraInfo extraInfo;
+    private final boolean haveExtraInfo;
+    private volatile int extraInfoListIndex = 0;
 
     private T row;
-    private final Stream.Builder<Table<T>> tableBuilder;
-    private Table<T> table;
+    private final Stream.Builder<GridSheet<T>> gridSheetBuilder;
+    private GridSheet<T> gridSheet;
+
+    private final boolean recordErrorMsg;
 
     public SheetToCSV(OPCPackage opcPackage, Reader reader) {
         this.opcPackage = opcPackage;
-        this.type = reader.table().modelType();
+        this.clazz = reader.gridSheet().clazz();
 
-        tableConfig = reader.table();
-        extMsgConfig = reader.table().extMsgConfig();
+        gridSheetConfig = reader.gridSheet();
+        extraInfo = reader.gridSheet().extraInfo();
+        if(extraInfo!=null ) {
+            haveExtraInfo = extraInfo.haveExtraInfo();
+        } else {
+            haveExtraInfo = false;
+        }
 
-        int headTitleRow = tableConfig.haveHeadTitle() ? 1: 0;
-        if(extMsgConfig.haveExtMsg()) {
-            this.startRow = headTitleRow + extMsgConfig.extMsgRow() + 1 + tableConfig.headLineRow();
-        } else this.startRow = headTitleRow + tableConfig.headLineRow();
+        if(haveExtraInfo) {
+            this.startRow = extraInfo.row() + 1 + gridSheetConfig.headLineRow();
+        } else this.startRow = gridSheetConfig.headLineRow();
 
-        tableBuilder = Stream.builder();
+        gridSheetBuilder = Stream.builder();
+
+        recordErrorMsg = reader.recordErrorMsg();
 
         try {
-            this.initFieldConverter(type.getDeclaredFields());
+            this.initFieldConverterAndValidator(clazz.getDeclaredFields());
         } catch (Exception e) {
             log.error("init field converter fail", e);
         }
@@ -70,7 +83,7 @@ public class SheetToCSV<T> extends ReaderConverter implements XSSFSheetXMLHandle
         if (currentRow < startRow) {
             return;
         }
-        row = ExcelKit.newInstance(type);
+        row = ExcelKit.newInstance(clazz);
     }
 
     @Override
@@ -78,14 +91,17 @@ public class SheetToCSV<T> extends ReaderConverter implements XSSFSheetXMLHandle
         if (currentRow < startRow) {
             return;
         }
-        table.data().add(row);
+        if(gridSheet.data() == null) {
+            gridSheet.data(new ArrayList<>());
+        }
+        gridSheet.data().add(row);
     }
 
     @Override
     public void cell(String cellReference, String formattedValue,
                      XSSFComment comment) {
 
-        if (currentRow < startRow && !tableConfig.haveHeadTitle() && !extMsgConfig.haveExtMsg()) {
+        if (currentRow < startRow && !haveExtraInfo) {
             return;
         }
 
@@ -100,39 +116,44 @@ public class SheetToCSV<T> extends ReaderConverter implements XSSFSheetXMLHandle
 
         currentCol = (int) (new CellReference(cellReference)).getCol();
 
-        if(currentRow == 0 && currentCol == 0 && tableConfig.haveHeadTitle()) {
-            table.headTitle(formattedValue);
-        }
+        if((currentRow+1) < startRow && haveExtraInfo) {
 
-        if((currentRow+1) < startRow && extMsgConfig.haveExtMsg()) {
+            if(extraInfoListIndex == gridSheet.extraInfo().getInfoList().size()) return;
 
-            if(tableConfig.haveHeadTitle() && currentRow == 0) return;
-
-            if(extMsgListIndex == table.extMsgList().size()) return;
-
-            ExtMsg extMsg = table.extMsgList().get(extMsgListIndex);
-
-            if(currentCol % (2 + extMsgConfig.extMsgColSpan()) == 0) {
-                extMsg.setTitle(formattedValue);
-            } else if(currentCol % (2 + extMsgConfig.extMsgColSpan()) == 1){
-                extMsg.setMsg(formattedValue);
-
-                extMsgListIndex++;
+            Info info = gridSheet.extraInfo().infoList().get(extraInfoListIndex);
+            if(currentCol % (2 + extraInfo.colSpan()) == 0) {
+                info.setK(formattedValue);
+            } else if(currentCol % (2 + extraInfo.colSpan()) == 1){
+                info.setV(formattedValue);
+                extraInfoListIndex++;
             }
         } else {
 
-            extMsgListIndex = 0;
+            extraInfoListIndex = 0;
             Field field = fieldIndexes.get(currentCol);
             if (null != field) {
                 try {
                     Object    cellValue = formattedValue;
                     Converter converter = fieldConverters.get(field);
                     if (null != converter) {
-                        cellValue = converter.stringToR(formattedValue);
+                        cellValue = converter.stringToR(formattedValue, field.getType());
                     }
                     field.set(row, cellValue);
+
+                    Validator validator = fieldValidators.get(field);
+                    if(null != validator) {
+                        String validError = validator.valid(cellValue);
+                        if(validError != null) {
+                            throw new ReaderException(validError);
+                        }
+                    }
                 } catch (Exception e) {
                     log.error("write field {} value fail", field.getName(), e);
+                    if(recordErrorMsg) {
+                        recordErrorMsg(row, e.getMessage());
+                    } else {
+                        throw E.unexpected(e);
+                    }
                 }
             }
         }
@@ -141,20 +162,20 @@ public class SheetToCSV<T> extends ReaderConverter implements XSSFSheetXMLHandle
 
     @Override
     public void endSheet() {
-        table.calTotalRow();
-        tableBuilder.add(table);
+        gridSheet.calTotalRow();
+        gridSheetBuilder.add(gridSheet);
     }
 
     public OPCPackage getOpcPackage() {
         return opcPackage;
     }
 
-    public Stream<Table<T>> getTableStream() {
-        return tableBuilder.build();
+    public Stream<GridSheet<T>> getGridSheetStream() {
+        return gridSheetBuilder.build();
     }
 
-    public void sheetMd(Table<T> table) {
-        this.table = table;
+    public void gridSheet(GridSheet<T> gridSheet) {
+        this.gridSheet = gridSheet;
     }
 
 }

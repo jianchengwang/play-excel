@@ -1,14 +1,13 @@
 
 package cn.jianchengwang.tl.poi.excel.reader;
 
+import cn.jianchengwang.tl.common.S;
 import cn.jianchengwang.tl.poi.excel.Reader;
+import cn.jianchengwang.tl.poi.excel.config.GridSheet;
 import cn.jianchengwang.tl.poi.excel.exception.ReaderException;
-import cn.jianchengwang.tl.poi.excel.kit.StrKit;
-import cn.jianchengwang.tl.poi.excel.config.Table;
 import org.apache.poi.ooxml.util.SAXHelper;
 import org.apache.poi.openxml4j.exceptions.OpenXML4JException;
 import org.apache.poi.openxml4j.opc.OPCPackage;
-import org.apache.poi.openxml4j.opc.PackageAccess;
 import org.apache.poi.ss.usermodel.DataFormatter;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.eventusermodel.ReadOnlySharedStringsTable;
@@ -33,7 +32,7 @@ public class ReaderWith2007 implements ExcelReader {
     }
 
     public <T> void readExcel(Reader reader) throws ReaderException {
-        Class<T> type = reader.table().modelType();
+        Class<T> clazz = reader.gridSheet().clazz();
         try {
             // The package open is instantaneous, as it should be.
             try (OPCPackage p = getPackage(reader)) {
@@ -42,19 +41,16 @@ public class ReaderWith2007 implements ExcelReader {
 
                 this.process(reader, sheetToCSV);
 
-                reader.tableStream(sheetToCSV.getTableStream());
+                reader.setGridSheetStream(sheetToCSV.getGridSheetStream());
             }
         } catch (Exception e) {
+            e.printStackTrace();
             throw new ReaderException(e);
         }
     }
 
     private OPCPackage getPackage(Reader reader) throws Exception {
-        if (reader.fromFile() != null) {
-            return OPCPackage.open(reader.fromFile(), PackageAccess.READ);
-        } else {
-            return OPCPackage.open(reader.fromStream());
-        }
+        return OPCPackage.open(reader.from());
     }
 
     /**
@@ -70,26 +66,34 @@ public class ReaderWith2007 implements ExcelReader {
         XSSFReader.SheetIterator   iter       = (XSSFReader.SheetIterator) xssfReader.getSheetsData();
         int                        index      = 0;
 
-        boolean isGetSingleSheet = StrKit.isNotEmpty(reader.table().sheetName()) || reader.table().sheetIndex()>-1;
+        boolean isGetSingleSheet = S.isNotEmpty(reader.getGridSheet().sheetName()) || reader.getGridSheet().sheetIndex()>-1;
         while (iter.hasNext()) {
             try (InputStream stream = iter.next()) {
 
                 if(isGetSingleSheet) {
-                    boolean bySheetName = StrKit.isNotEmpty(reader.table().sheetName());
+                    boolean bySheetName = S.isNotEmpty(reader.gridSheet().sheetName());
                     String sheetName = iter.getSheetName();
 
-                    sheetToCSV.sheetMd(Table.create(reader.table().modelType(),index, sheetName).initExtMsgList(reader.table().extMsgConfig().extMsgTotal()));
-                    if (bySheetName && reader.table().sheetName().equals(sheetName)) {
+                    sheetToCSV.gridSheet(GridSheet.build()
+                            .clazz(reader.gridSheet().clazz())
+                            .sheetIndex(index)
+                            .sheetName(sheetName)
+                            .extraInfo(reader.gridSheet().extraInfo()));
+                    if (bySheetName && reader.gridSheet().sheetName().equals(sheetName)) {
                         processSheet(styles, strings, sheetToCSV, stream);
                         break;
                     }
-                    if (!bySheetName && reader.table().sheetIndex() == index) {
+                    if (!bySheetName && reader.gridSheet().sheetIndex() == index) {
                         processSheet(styles, strings, sheetToCSV, stream);
                         break;
                     }
                 }
 
-                sheetToCSV.sheetMd(Table.create(reader.table().modelType(),index, iter.getSheetName()).initExtMsgList(reader.table().extMsgConfig().extMsgTotal()));
+                sheetToCSV.gridSheet(GridSheet.build()
+                        .clazz(reader.gridSheet().clazz())
+                        .sheetIndex(index)
+                        .sheetName(iter.getSheetName())
+                        .extraInfo(reader.gridSheet().extraInfo()));
                 processSheet(styles, strings, sheetToCSV, stream);
 
             }

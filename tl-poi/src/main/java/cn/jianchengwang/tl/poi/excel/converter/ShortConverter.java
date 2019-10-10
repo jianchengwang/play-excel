@@ -1,21 +1,20 @@
 package cn.jianchengwang.tl.poi.excel.converter;
 
-
-import cn.jianchengwang.tl.poi.excel.exception.ConverterException;
-import cn.jianchengwang.tl.poi.excel.kit.StrKit;
+import cn.jianchengwang.tl.common.E;
+import cn.jianchengwang.tl.common.S;
 
 public class ShortConverter extends NumberConverter implements Converter<String, Short> {
 
     @Override
-    public Short stringToR(String value) throws ConverterException {
+    public Short stringToR(String value, Class clazz) {
         try {
             value = super.replaceComma(value);
-            if (StrKit.isEmpty(value)) {
+            if (S.isEmpty(value)) {
                 return null;
             }
             return Short.parseShort(value);
         } catch (Exception e) {
-            throw new ConverterException("convert [" + value + "] to Integer error", e);
+            throw E.converterException("convert [" + value + "] to Integer error", e);
         }
     }
 

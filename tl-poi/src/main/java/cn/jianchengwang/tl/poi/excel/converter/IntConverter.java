@@ -1,22 +1,22 @@
 
 package cn.jianchengwang.tl.poi.excel.converter;
 
-import cn.jianchengwang.tl.poi.excel.exception.ConverterException;
-import cn.jianchengwang.tl.poi.excel.kit.StrKit;
+import cn.jianchengwang.tl.common.E;
+import cn.jianchengwang.tl.common.S;
 
 public class IntConverter extends NumberConverter implements Converter<String, Integer> {
 
     @Override
-    public Integer stringToR(String value) throws ConverterException {
+    public Integer stringToR(String value, Class clazz) {
         try {
             value = super.replaceComma(value);
-            if (StrKit.isEmpty(value)) {
+            if (S.isEmpty(value)) {
                 return null;
             }
 
             return Integer.parseInt(value);
         } catch (Exception e) {
-            throw new ConverterException("convert [" + value + "] to Integer error", e);
+            throw E.converterException("convert [" + value + "] to Integer error", e);
         }
     }
 

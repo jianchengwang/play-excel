@@ -1,0 +1,29 @@
+server:
+  port: 8080
+
+# 文件存储配置
+storage:
+  storeType: fs
+  moduleDir:
+    user: user
+    project: project
+    wiki: wiki
+    rt: rt
+    images: images
+
+  # 不同storage配置项不一样，请查看配置文件源码
+  fs:
+    root-path: C:\uploads
+
+  oss:
+    endpoint: oss-cn-hangzhou.aliyuncs.com
+    accessKeyId: pwRv2N55r5wzi1CJ
+    accessKeySecret: CB6SOFly6A5WXPHECqwRQXYtyPDxLT
+    bucketName: osswebtest
+
+  kodo:
+    domain: http://pwz7kc6wz.bkt.clouddn.com
+    access-key: 3jviopKzYWDNiKC_OVOwasGyKrHqFz_0tGxMYLeg
+    secret-key: sIZHyE-kWRO_n6e98wspgzQQ1dIVjfRLrbYHh1z9
+    bucket: kodotest
+    permission: private

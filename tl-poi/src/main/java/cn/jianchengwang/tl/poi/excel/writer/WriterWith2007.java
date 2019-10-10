@@ -3,10 +3,8 @@ package cn.jianchengwang.tl.poi.excel.writer;
 
 import cn.jianchengwang.tl.poi.excel.Writer;
 import cn.jianchengwang.tl.poi.excel.exception.WriterException;
-import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 
-import java.io.IOException;
 import java.io.OutputStream;
 
 /**
@@ -21,17 +19,8 @@ public class WriterWith2007 extends ExcelWriter {
 
     @Override
     public void writeSheet(Writer writer) throws WriterException {
-        if (writer.template() != null) {
-            try {
-                this.workbook = WorkbookFactory.create(writer.template());
-                super.writeSheet(writer);
-            } catch (IOException e) {
-                throw new WriterException(e);
-            }
-        } else {
-            this.workbook = new SXSSFWorkbook(writer.bufferSize());
-            super.writeSheet(writer);
-        }
+        this.workbook = new SXSSFWorkbook(writer.bufferSize());
+        super.writeSheet(writer);
     }
 
 }

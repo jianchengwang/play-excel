@@ -1,14 +1,13 @@
 
 package cn.jianchengwang.tl.poi.excel.reader;
 
+import cn.jianchengwang.tl.common.S;
 import cn.jianchengwang.tl.poi.excel.Reader;
-import cn.jianchengwang.tl.poi.excel.config.Table;
+import cn.jianchengwang.tl.poi.excel.config.extrainfo.ExtraInfo;
+import cn.jianchengwang.tl.poi.excel.config.extrainfo.Info;
 import cn.jianchengwang.tl.poi.excel.converter.Converter;
-import cn.jianchengwang.tl.poi.excel.exception.ConverterException;
 import cn.jianchengwang.tl.poi.excel.exception.ReaderException;
-import cn.jianchengwang.tl.poi.excel.kit.StrKit;
-import cn.jianchengwang.tl.poi.excel.config.extmsg.ExtMsg;
-import cn.jianchengwang.tl.poi.excel.config.extmsg.ExtMsgConfig;
+import cn.jianchengwang.tl.poi.excel.config.GridSheet;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
 
@@ -22,7 +21,7 @@ import java.util.List;
 import java.util.stream.Stream;
 
 @Slf4j
-public class ReaderWith2003 extends ReaderConverter implements ExcelReader {
+public class ReaderWith2003 extends ReaderConverterAndValidator implements ExcelReader {
 
     private Workbook workbook;
 
@@ -32,23 +31,25 @@ public class ReaderWith2003 extends ReaderConverter implements ExcelReader {
 
     @Override
     public <T> void readExcel(Reader reader) throws ReaderException {
-        Class             type    = reader.table().modelType();
-        Stream.Builder<Table<T>> builder = Stream.builder();
+        Class             clazz    = reader.gridSheet().clazz();
+        Stream.Builder<GridSheet<T>> builder = Stream.builder();
 
         try {
-            this.initFieldConverter(type.getDeclaredFields());
+            this.initFieldConverterAndValidator(clazz.getDeclaredFields());
 
-            Table tableConfig = reader.table();
-            ExtMsgConfig extMsgConfig = tableConfig.extMsgConfig();
-            boolean haveHeadTitle = tableConfig.haveHeadTitle();
-            boolean haveExtMsg = extMsgConfig.haveExtMsg();
+            ExtraInfo extraInfo = reader.gridSheet().extraInfo();
 
-            int extMsgRow = 0;
-            if(haveExtMsg) extMsgRow = extMsgConfig.extMsgRow();
-            int extMsgCol = extMsgConfig.extMsgCol();
-            int extMsgColSpan = extMsgConfig.extMsgColSpan();
+            boolean haveExtraInfo = false;
+            int extraInfoRow = 0;
+            int extraInfoCol = 0;
+            int extraInfoColSpan = 0;
+            if(extraInfo!=null && extraInfo.haveExtraInfo()) {
+                extraInfoRow = extraInfo.getRow();
+                extraInfoCol = extraInfo.getCol();
+                extraInfoColSpan = extraInfo.colSpan();
+            }
 
-            boolean isGetSingleSheet = StrKit.isNotEmpty(tableConfig.sheetName()) || tableConfig.sheetIndex()>-1;
+            boolean isGetSingleSheet = S.isNotEmpty(reader.gridSheet().sheetName()) || reader.gridSheet().sheetIndex()>-1;
             for(int si=0; si<workbook.getNumberOfSheets(); si++) {
 
                 Sheet sheet = workbook.getSheetAt(si);
@@ -56,38 +57,33 @@ public class ReaderWith2003 extends ReaderConverter implements ExcelReader {
                     sheet = getSheet(reader);
                 }
 
-                Table<T> table = Table.create(tableConfig.modelType(), si, sheet.getSheetName()).initExtMsgList(extMsgConfig.extMsgTotal()).haveHeadTitle(haveHeadTitle);
+                GridSheet<T> gridSheet = GridSheet.build().clazz(clazz).sheetIndex(si).sheetName(sheet.getSheetName()).extraInfo(reader.gridSheet().extraInfo());
+                int startRow = reader.gridSheet().getStartRow();
+                if(haveExtraInfo) {
 
-                int startRow = 0;
-                if(haveHeadTitle) {
-                    startRow += 1;
-
-                    table.headTitle(sheet.getRow(0).getCell(0).getStringCellValue());
-                }
-
-                if(haveExtMsg) {
-
-                    List<ExtMsg> extMsgList = table.extMsgList();
-                    for(int ri=0; ri<extMsgRow; ri++) {
+                    List<Info> infoList = gridSheet.extraInfo().infoList();
+                    for(int ri=0; ri<extraInfoRow; ri++) {
                         Row row = sheet.getRow(ri + startRow);
                         if (null == row) {
                             continue;
                         }
 
-                        for(int ci=0; ci<extMsgCol; ci++) {
+                        for(int ci=0; ci<extraInfoCol; ci++) {
 
-                            Cell cellTitle = row.getCell(ci + (extMsgColSpan+1) * ci);
-                            Cell cellMsg = row.getCell(ci + (extMsgColSpan+1) * ci + 1);
+                            Cell cellTitle = row.getCell(ci + (extraInfoColSpan+1) * ci);
+                            Cell cellMsg = row.getCell(ci + (extraInfoColSpan+1) * ci + 1);
 
-                            ExtMsg extMsg = extMsgList.get(ri);
-                            extMsg.setTitle(getCellValue(cellTitle));
-                            extMsg.setMsg(getCellValue(cellMsg));
+                            Info info = infoList.get(ri);
+                            info.setK(getCellValue(cellTitle));
+                            info.setV(getCellValue(cellMsg));
 
                         }
                     }
-                }
 
-                if(haveExtMsg) startRow = startRow + extMsgRow + 1 + table.headLineRow();
+                    startRow = startRow + extraInfoRow + 1 + reader.gridSheet().headLineRow();
+                } else {
+                    startRow = startRow + reader.gridSheet().headLineRow();
+                }
                 int totalRow = sheet.getPhysicalNumberOfRows();
 
                 List<T> data = new ArrayList<>();
@@ -98,41 +94,42 @@ public class ReaderWith2003 extends ReaderConverter implements ExcelReader {
                         continue;
                     }
 
-                    Object instance = type.newInstance();
+                    Object instance = clazz.newInstance();
                     for (Field field : fieldIndexes.values()) {
-                        this.writeFiledValue(row, instance, field);
+                        this.writeFiledValue(row, instance, field, reader.recordErrorMsg());
                     }
 
                     data.add((T) instance);
                 }
 
-                table.data(data);
+                gridSheet.data(data);
 
-                builder.add(table);
+                builder.add(gridSheet);
 
                 if(isGetSingleSheet) break;
             }
 
-            reader.tableStream(builder.build());
+            reader.setGridSheetStream(builder.build());
 
         } catch (Exception e) {
+            e.printStackTrace();
             throw new ReaderException(e);
         }
     }
 
     public Sheet getSheet(Reader reader) {
-        return StrKit.isNotEmpty(reader.table().sheetName()) ?
-                workbook.getSheet(reader.table().sheetName()) : workbook.getSheetAt(reader.table().sheetIndex());
+        return S.isNotEmpty(reader.gridSheet().sheetName()) ?
+                workbook.getSheet(reader.gridSheet().sheetName()) : workbook.getSheetAt(reader.gridSheet().sheetIndex());
     }
 
-    public Object getCellValue(Field field, Cell cell) throws ConverterException {
+    public Object getCellValue(Field field, Cell cell) {
         Converter<String, ?> converter = fieldConverters.get(field);
 
         if (null == converter) {
             return cell.getStringCellValue();
         }
         if (cell.getCellType() != CellType.NUMERIC) {
-            return converter.stringToR(cell.getStringCellValue());
+            return converter.stringToR(cell.getStringCellValue(), field.getType());
         }
         if (isDateType(field.getType())) {
             Date javaDate = DateUtil.getJavaDate(cell.getNumericCellValue());
@@ -145,11 +142,11 @@ public class ReaderWith2003 extends ReaderConverter implements ExcelReader {
             }
             return null;
         } else {
-            return converter.stringToR(cell.getNumericCellValue() + "");
+            return converter.stringToR(cell.getNumericCellValue() + "", field.getType());
         }
     }
 
-    public String getCellValue(Cell cell) throws ConverterException {
+    public String getCellValue(Cell cell) {
 
         if(cell == null) return "";
 
