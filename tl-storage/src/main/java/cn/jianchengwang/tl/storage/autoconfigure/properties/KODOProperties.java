@@ -1,8 +1,8 @@
 package cn.jianchengwang.tl.storage.autoconfigure.properties;
 
-import cn.bespinglobal.amg.common.tool.E;
-import cn.bespinglobal.amg.common.tool.S;
-import cn.bespinglobal.amg.common.tool.V;
+import cn.jianchengwang.tl.common.E;
+import cn.jianchengwang.tl.common.S;
+import cn.jianchengwang.tl.common.V;
 import lombok.Data;
 
 /**

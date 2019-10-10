@@ -1,6 +1,6 @@
 package cn.jianchengwang.tl.storage.adapter;
 
-import cn.bespinglobal.amg.common.tool.E;
+import cn.jianchengwang.tl.common.E;
 import cn.jianchengwang.tl.storage.pojo.ListObject;
 import cn.jianchengwang.tl.storage.pojo.SObject;
 

@@ -20,7 +20,6 @@ import lombok.extern.slf4j.Slf4j;
  * @author Caratacus
  * @since 2016-09-22
  */
-@Slf4j
 public class ReflectionTool {
 
     private static final Map<Class<?>, List<Field>> CLASS_FIELD_CACHE = new ConcurrentHashMap<>();

@@ -3,7 +3,7 @@ package cn.jianchengwang.tl.storage.adapter;
 import com.aliyun.oss.OSS;
 import com.aliyun.oss.OSSClientBuilder;
 import com.aliyun.oss.model.*;
-import cn.bespinglobal.amg.common.tool.E;
+import cn.jianchengwang.tl.common.E;
 import cn.jianchengwang.tl.storage.autoconfigure.properties.OSSProperties;
 import cn.jianchengwang.tl.storage.pojo.ListObject;
 import cn.jianchengwang.tl.storage.pojo.SObject;

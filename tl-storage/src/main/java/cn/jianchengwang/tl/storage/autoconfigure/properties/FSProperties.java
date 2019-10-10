@@ -1,6 +1,6 @@
 package cn.jianchengwang.tl.storage.autoconfigure.properties;
 
-import cn.bespinglobal.amg.common.tool.E;
+import cn.jianchengwang.tl.common.E;
 import lombok.Data;
 import org.springframework.util.StringUtils;
 

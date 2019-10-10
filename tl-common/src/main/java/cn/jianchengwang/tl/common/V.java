@@ -9,7 +9,6 @@ import java.util.regex.Pattern;
  * Validate Tool
  * Created by wjc on 2019/8/26
  **/
-@Slf4j
 @UtilityClass
 public class V {
 

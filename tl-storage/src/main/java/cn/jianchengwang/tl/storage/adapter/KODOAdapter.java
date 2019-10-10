@@ -1,8 +1,8 @@
 package cn.jianchengwang.tl.storage.adapter;
 
 import com.google.gson.Gson;
-import cn.bespinglobal.amg.common.tool.E;
-import cn.bespinglobal.amg.common.tool.S;
+import cn.jianchengwang.tl.common.E;
+import cn.jianchengwang.tl.common.S;
 import cn.jianchengwang.tl.storage.autoconfigure.properties.KODOProperties;
 import cn.jianchengwang.tl.storage.pojo.ListObject;
 import cn.jianchengwang.tl.storage.pojo.SObject;

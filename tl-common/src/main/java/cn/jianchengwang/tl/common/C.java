@@ -13,7 +13,6 @@ import java.util.stream.Collectors;
 /**
  * Created by wjc on 2019/9/2
  **/
-@Slf4j
 @UtilityClass
 public class C {
 

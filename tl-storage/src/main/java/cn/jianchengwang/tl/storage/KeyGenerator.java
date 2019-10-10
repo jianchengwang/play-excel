@@ -1,6 +1,6 @@
 package cn.jianchengwang.tl.storage;
 
-import cn.bespinglobal.amg.common.tool.S;
+import cn.jianchengwang.tl.common.S;
 
 import java.util.Calendar;
 
