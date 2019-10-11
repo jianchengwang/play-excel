@@ -39,7 +39,7 @@ public class ReflectionTool {
             return Collections.emptyList();
         }
         List<Field> fields = CLASS_FIELD_CACHE.get(clazz);
-        if (fields.isEmpty()) {
+        if (fields==null || fields.isEmpty()) {
             synchronized (CLASS_FIELD_CACHE) {
                 fields = doGetFieldList(clazz);
                 CLASS_FIELD_CACHE.put(clazz, fields);
