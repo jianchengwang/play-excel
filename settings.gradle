@@ -4,5 +4,3 @@ include 'tl-poi'
 include 'tl-mp'
 include 'tl-jdbc'
 include 'tl-storage'
-include 'tl-common'
-
